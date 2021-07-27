@@ -34,15 +34,103 @@ set.seed(216)
 subset = df[sample(x=nrow(df), size=10000),]
 ```
 
-Select a small subset of observations from the dataset (so that we can run multiple k-NN's without the computer crashing) 
-```{r}
-
-```
-
-
 Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
 ```{r}
 
+#code from EDA
+#standardize dataset
+standardize = function(vector) {
+  z = (vector-mean(vector))/sd(vector)
+  return(z)
+}
+
+df_knn = df_test %>%
+  mutate( #modified test set to standardize all variables
+    previous_cancellations=standardize(previous_cancellations),
+    previous_bookings_not_canceled=standardize(previous_bookings_not_canceled),
+    hotel=ifelse(hotel=="Resort Hotel", 1, 0),
+    hotel=standardize(hotel),
+    lead_time=standardize(lead_time),
+    adr=standardize(adr)
+    ) %>% 
+  mutate(predicted_canc4=knn(
+    train=dplyr::select(
+      df_train,
+      lead_time,
+      adr,
+      previous_cancellations
+      ),
+    test=dplyr::select(
+      df_test,
+      lead_time,
+      adr,
+      previous_cancellations
+    ),
+    cl=factor(
+      df_train$is_canceled,
+      levels=c(0,1),
+      labels=c("Not canceled","Canceled")
+    ),
+    k=5)
+  ) %>%
+  dplyr::select(predicted_canc4)
+
+#function to give 
+model.knn.func = function(data, k) {
+  
+}
+
+for (k in 1:50) {
+  for (c in 1:5) {
+    
+  }
+  #accuracy of k = mean(accuracy for each c)
+}
+```
+Steps:
+Make sure there aren't too many NA's (check)
+Get code for cross-validated accuracy
+```{r}
+subset.c= subset %>% crossv_kfold(k=5)
+subset1 = subset.c[1,]
+subset1 %>% select(train) %>%
+  unnest(cols=c(train))
+
+#cross validation code
+for (c in 1:5) {
+  #make predictions using knn
+  df_test %>% 
+  mutate( #modified test set to standardize all variables
+    previous_cancellations=standardize(previous_cancellations),
+    previous_bookings_not_canceled=standardize(previous_bookings_not_canceled),
+    hotel=ifelse(hotel=="Resort Hotel", 1, 0),
+    hotel=standardize(hotel),
+    lead_time=standardize(lead_time),
+    adr=standardize(adr)
+    ) %>% 
+  mutate(prediction=knn(
+    train=dplyr::select(
+      df_train,
+      lead_time,
+      adr,
+      previous_cancellations
+      ),
+    test=dplyr::select(
+      df_test,
+      lead_time,
+      adr,
+      previous_cancellations
+    ),
+    cl=factor(
+      df_train$is_canceled,
+      levels=c(0,1),
+      labels=c("Not canceled","Canceled")
+    ),
+    k=2
+  )
+  
+  #calculate accuracy using predictions
+}
 ```
 
 
