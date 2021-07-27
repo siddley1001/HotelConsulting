@@ -20,7 +20,7 @@ library(lubridate)
 library(pracma)
 
 # Import Data Below
-df = read_csv("hotel_bookings.csv")
+df = read_csv("hotel_booking.csv")
 
 #Initial Data Manipulations
 df = df %>% mutate_if(is.character, as.factor)
@@ -30,7 +30,7 @@ df$arrival_date_month <- factor(df$arrival_date_month, levels = month.name)
 
 ```{r}
 ## different dataframes - Tara
-hotels <- read_csv("hotel_bookings.csv")
+hotels <- read_csv("hotel_booking.csv")
 hotels_refined = hotels %>% select(hotel, arrival_date_month, arrival_date_day_of_month, arrival_date_year, country ,adr, is_canceled) %>% rename(Hotel_Type = hotel, Country_of_Origin = country, Arrival_month = arrival_date_month, Arrival_date = arrival_date_day_of_month, Arrival_year = arrival_date_year, Average_Daily_Rate = adr)
 
 month_levels <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
@@ -612,3 +612,9 @@ detach("package:MASS", unload = TRUE)
   For our first follow up question, we wanted to see the difference between a sinusoidal and polynomial regression for the relationship between arrival date and average daily rate. We used data previously arranged to plot arrival time and average daily rate in a time series. In order to find this model, We needed to tweak the arrival date data. Instead of showing the actual arrival date, the x axis now indicated the number of days since the first recorded date of a customer. For both city and resort data, the sinusoidal curve seems to be a better fit. The R^2 values for the polynomial curve are better for both the resort and city data, as they are higher than the sinusoidal R^2 values. The polynomial used was a sextic function, as all graphs seemed to have 5 inflection points. The oscillations in the graph suggested that this data could be plotted using these functions. The R^2 value for resort data sinusoidal was 0.6317, and the R^2 value for resort data polynomial was 0.7256. The R^2 value for city data sinusoidal was 0.3356, and the R^2 value for city data polynomial was 0.6602, indicating that the sextic function was a better fit for both data. This indicates that while the data oscillates, there are certain arrival dates that strongly forecast lower average daily rates and certain arrival dates that strongly forecast higher average daily rates with a peak in the average daily rate ranging around July of each year. For our next question, we asked which model best predicts cancellation. We made 4 models: Model 1 is logistic regression, Model 2 stepwise logistic regression, Model 3 logistic regression with two-variable interaction, and Model 4 k-NN, with k=5. A table of with metrics measuring the success of these models is above. The k-NN model was the most accurate and the most sensitive, but it was the least specific, compared against the other logistic regression models. To determine whether sensitivity or specificity matters more, we need to consider the practical context of our model. We were thinking our model could be used to help hotel managers create a “fast-track” waitlist of people to replace the individuals who are more likely to cancel. As long as the hotels don’t actually guarantee rooms to folks on the fast-track waitlist, it should not matter whether managers wrongly predict cancellation. That is, it should not matter how “specific” managers are. In this context, we care more so about sensitivity. As such, the k-NN model would be the best fit. We finally explored whether there is a correlation or relationship between the days on the waitlist and the hotel’s Average Daily Revenue (ADR). We found a weak negative relationship between days on the waitlist and the ADR for city hotels and a weak positive relationship between the two variables for resort hotels. Next, we explored how often non-refund bookings canceled. The data showed that the “transient” customer type canceled an overwhelming number of bookings.
   
 First edit.
+
+Randomly obtain small subset of data:
+```{r}
+sample(x=nrow(df), size=10000)
+```
+
