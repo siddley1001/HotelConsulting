@@ -1,0 +1,70 @@
+---
+title: "HotelsFinalAnalysis"
+author: "David Snider"
+date: "7/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(countrycode)
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(xtable)
+library(modelr)
+library(broom)
+library(class)
+library(lubridate)
+library(pracma)
+
+df = read_csv("hotel_booking.csv")
+```
+
+
+# Question 2:
+
+Randomly obtain small subset of data:
+```{r}
+set.seed(216)
+subset = df[sample(x=nrow(df), size=10000),]
+```
+
+Select a small subset of observations from the dataset (so that we can run multiple k-NN's without the computer crashing) 
+```{r}
+
+```
+
+
+Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
+```{r}
+
+```
+
+
+Identify best 3 k-values
+```{r}
+
+```
+
+Run those best 3 k-values on the entire data (can split into train-test, i.e. no need for cross validation)
+```{r}
+
+```
+
+
+Identify best k-value
+```{r}
+
+```
+
+Weighting best k-NN with simple log to get desired specificity/sensitivity
+```{r}
+
+```
+
+
