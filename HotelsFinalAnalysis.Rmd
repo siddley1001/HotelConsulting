@@ -37,8 +37,10 @@ standardize = function(vector) {
 
 #divides correct prediction by total predictions
 accuracy = function(x) {
-  sum(diag(x)/ sum(diag(x)/(sum(rowSums(x))))) *100
+  sum(diag(x)/(sum(rowSums(x)))) * 100
 }
+
+
 ```
 
 ```{r}
@@ -60,132 +62,46 @@ df_norm = as.data.frame(lapply(df[, c("previous_cancellations", "previous_bookin
 df_train = df_norm[ran, ] #%>% cbind(., )
 df_test = df_norm[-ran, ]
 
-df_target_category = df[ran, "is_canceled"]
-df_test_category = df[-ran, "is_canceled"]
+df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
+df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
 ```
 
 ```{r}
-df_train %>% is.na()
-```
+acc = list()
+options(width = 80)
 
-```{r}
-acc = vector("list", 100)
-
-for (k in 1:100){
-  knn_output = knn(df_train, df_test, cl=df_target_category, k=k, prob=T)
+for (k in 1:20){
+  knn_output = knn(df_train, df_test, cl=df_target_category, k=k)
   confusion_matrix = table(knn_output, df_test_category)
   
   acc[[k]]= accuracy(confusion_matrix)
-  
 }
 ```
 
 
 ```{r}
 tab = cbind(tab, acc)
-tab
+tab %>% unnest() %>% as.data.frame()
+```
+
+% of people that cancelled their hotel booking
+```{r}
+df$is_canceled %>% sum()/ count(df)
+```
+
+
+```{r}
+ggplot(as.data.frame(tab)) + geom_line(aes(x=Index, y=acc))
 ```
 
 
 Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
-```{r}
 
-df_knn = subset %>%
-  mutate( #modified test set to standardize all variables
-    previous_cancellations= standardize(previous_cancellations),
-    previous_bookings_not_canceled= standardize(previous_bookings_not_canceled),
-    hotel= ifelse(hotel=="Resort Hotel", 1, 0), #still have to do
-    hotel= standardize(hotel),
-    lead_time= standardize(lead_time),
-    adr= standardize(adr)) %>% 
-  mutate(predicted_canc4= knn(
-    train= dplyr::select(df_train, lead_time, adr, previous_cancellations),
-    test= dplyr::select(df_test, lead_time, adr, previous_cancellations),
-    cl= factor(df_train$is_canceled, levels=c(0,1), labels=c("Not canceled", "Canceled")
-        ), 
-    k=5)) %>% 
-  dplyr::select(predicted_canc4)
+# Next Steps:
 
-#function to give 
-model.knn.func = function(data, k) {
-  
-}
-
-for (k in 1:50) {
-  for (c in 1:5) {
-    
-  }
-  #accuracy of k = mean(accuracy for each c)
-}
-```
-Steps:
+- Visualize Metrics as K increases for KNN
+- Calculate F1 score for both Logistic Regression and KNN + Visualize
+- Make a RF model w/ accomopanying metrics
 
 Make sure there aren't too many NA's (check)
-
-Get code for cross-validated accuracy
-```{r}
-subset.c= subset %>% crossv_kfold(k=5)
-subset1 = subset.c[1,]
-subset1 %>% select(train) %>%
-  unnest(cols=c(train))
-
-#cross validation code
-for (c in 1:5) {
-  #make predictions using knn
-  df_test %>% 
-  mutate( #modified test set to standardize all variables
-    previous_cancellations=standardize(previous_cancellations),
-    previous_bookings_not_canceled=standardize(previous_bookings_not_canceled),
-    hotel=ifelse(hotel=="Resort Hotel", 1, 0),
-    hotel=standardize(hotel),
-    lead_time=standardize(lead_time),
-    adr=standardize(adr)
-    ) %>% 
-  mutate(prediction=knn(
-    train=dplyr::select(
-      df_train,
-      lead_time,
-      adr,
-      previous_cancellations
-      ),
-    test=dplyr::select(
-      df_test,
-      lead_time,
-      adr,
-      previous_cancellations
-    ),
-    cl=factor(
-      df_train$is_canceled,
-      levels=c(0,1),
-      labels=c("Not canceled","Canceled")
-    ),
-    k=2
-  )
-  
-  #calculate accuracy using predictions
-}
-```
-
-
-Identify best 3 k-values
-```{r}
-
-```
-
-Run those best 3 k-values on the entire data (can split into train-test, i.e. no need for cross validation)
-```{r}
-
-```
-
-
-Identify best k-value
-```{r}
-
-```
-
-Weighting best k-NN with simple log to get desired specificity/sensitivity
-```{r}
-
-```
-
 
