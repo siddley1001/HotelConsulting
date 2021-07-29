@@ -21,138 +21,110 @@ library(broom)
 library(class)
 library(lubridate)
 library(pracma)
-
+library(class)
 df = read_csv("hotel_booking.csv")
 ```
 
+# Question 2: Predicting  Cancellation w/ KNN
 
-# Question 2:
-
-Randomly obtain small subset of data:
+Formulas
 ```{r}
-set.seed(216)
-subset = df[sample(x=nrow(df), size=10000),]
-```
-
-Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
-```{r}
-
-#code from EDA
-#standardize dataset
 standardize = function(vector) {
   z = (vector-mean(vector))/sd(vector)
   return(z)
 }
-
-df_knn = df_test %>%
-  mutate( #modified test set to standardize all variables
-    previous_cancellations=standardize(previous_cancellations),
-    previous_bookings_not_canceled=standardize(previous_bookings_not_canceled),
-    hotel=ifelse(hotel=="Resort Hotel", 1, 0),
-    hotel=standardize(hotel),
-    lead_time=standardize(lead_time),
-    adr=standardize(adr)
-    ) %>% 
-  mutate(predicted_canc4=knn(
-    train=dplyr::select(
-      df_train,
-      lead_time,
-      adr,
-      previous_cancellations
-      ),
-    test=dplyr::select(
-      df_test,
-      lead_time,
-      adr,
-      previous_cancellations
-    ),
-    cl=factor(
-      df_train$is_canceled,
-      levels=c(0,1),
-      labels=c("Not canceled","Canceled")
-    ),
-    k=5)
-  ) %>%
-  dplyr::select(predicted_canc4)
-
-#function to give 
-model.knn.func = function(data, k) {
-  
-}
-
-for (k in 1:50) {
-  for (c in 1:5) {
-    
-  }
-  #accuracy of k = mean(accuracy for each c)
+#divides correct prediction by total predictions
+accuracy = function(x) {
+  sum(diag(x)/(sum(rowSums(x)))) * 100
 }
 ```
-Steps:
+
+```{r}
+tab = matrix(seq(1,100), ncol = 1, byrow = F)
+colnames(tab) = c("Index")
+```
+
+
+Randomly obtain small subset of data:
+```{r}
+set.seed(216)
+ran = sample(1:nrow(df), 0.9 * nrow(df))
+df = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
+df_norm = as.data.frame(lapply(df[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr")], standardize)) #including hotel causes NANs
+#subset = df[sample(x=nrow(df), size=10000), ]
+df_train = df_norm[ran, ] #%>% cbind(., )
+df_test = df_norm[-ran, ]
+df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
+df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
+```
+
+```{r}
+acc = list()
+options(width = 80)
+for (k in 1:20){
+  knn_output = knn(df_train, df_test, cl=df_target_category, k=k)
+  confusion_matrix = table(knn_output, df_test_category)
+  
+  acc[[k]]= accuracy(confusion_matrix)
+}
+```
+
+
+```{r}
+tab = cbind(tab, acc)
+tab %>% unnest() %>% as.data.frame()
+```
+
+% of people that cancelled their hotel booking
+```{r}
+df$is_canceled %>% sum()/ count(df)
+```
+
+
+```{r}
+ggplot(as.data.frame(tab)) + geom_line(aes(x=Index, y=acc))
+```
+
+
+Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
+
+# Next Steps:
+
+- Visualize Metrics as K increases for KNN
+- Calculate F1 score for both Logistic Regression and KNN + Visualize
+- Make a RF model w/ accomopanying metrics
+
 Make sure there aren't too many NA's (check)
-Get code for cross-validated accuracy
 ```{r}
-subset.c= subset %>% crossv_kfold(k=5)
-subset1 = subset.c[1,]
-subset1 %>% select(train) %>%
-  unnest(cols=c(train))
+city_hotels2 = df %>% filter(hotel == "City Hotel", is_canceled == 0) %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month,stays_in_week_nights, stays_in_weekend_nights, adr) %>% mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% arrange(arrival_date_year, arrival_date_month, arrival_date_day_of_month)
 
-#cross validation code
-for (c in 1:5) {
-  #make predictions using knn
-  df_test %>% 
-  mutate( #modified test set to standardize all variables
-    previous_cancellations=standardize(previous_cancellations),
-    previous_bookings_not_canceled=standardize(previous_bookings_not_canceled),
-    hotel=ifelse(hotel=="Resort Hotel", 1, 0),
-    hotel=standardize(hotel),
-    lead_time=standardize(lead_time),
-    adr=standardize(adr)
-    ) %>% 
-  mutate(prediction=knn(
-    train=dplyr::select(
-      df_train,
-      lead_time,
-      adr,
-      previous_cancellations
-      ),
-    test=dplyr::select(
-      df_test,
-      lead_time,
-      adr,
-      previous_cancellations
-    ),
-    cl=factor(
-      df_train$is_canceled,
-      levels=c(0,1),
-      labels=c("Not canceled","Canceled")
-    ),
-    k=2
-  )
-  
-  #calculate accuracy using predictions
-}
+city_hotels2$arrival_date_month = as.integer(factor(city_hotels2$arrival_date_month, levels = month.name))
+
+city_hotels2 = city_hotels2 %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month, length_of_stay, adr) %>% unite("arrival_date", c("arrival_date_year", "arrival_date_month", "arrival_date_day_of_month"), sep = "/") %>% filter(adr != 0.00)
+
+city_hotels2$arrival_date <- as.Date(city_hotels2$arrival_date)
+city_hotels2 = city_hotels2 %>% arrange(arrival_date)  %>% group_by(arrival_date) %>% summarise(avg_length_of_stay = mean(length_of_stay), avg_adr = mean(adr))
+
+model_data_city = city_hotels2
+start_date = as.Date("2015-07-01")
+model_data_city$arrival_date <- as.numeric(difftime(model_data_city$arrival_date, start_date, unit = "days"))
+NumDays.city <- model_data_city$arrival_date
 ```
 
-
-Identify best 3 k-values
-```{r}
-
+```{r, results="asis"}
+q1table = model_data_city %>% 
+  head(4) %>%
+  select(-avg_length_of_stay) %>%
+  mutate(arrival_date = as.integer(arrival_date)) %>%
+  xtable(
+    align="ccc", 
+    type="html")
+print(q1table, 
+      "html", 
+      include.rownames=FALSE,
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px")
 ```
-
-Run those best 3 k-values on the entire data (can split into train-test, i.e. no need for cross validation)
-```{r}
-
-```
-
-
-Identify best k-value
-```{r}
-
-```
-
-Weighting best k-NN with simple log to get desired specificity/sensitivity
-```{r}
-
-```
-
-
