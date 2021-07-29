@@ -23,6 +23,7 @@ library(lubridate)
 library(pracma)
 library(class)
 df = read_csv("hotel_booking.csv")
+k_df = read_csv("k_df.csv")
 ```
 
 # Question 2: Predicting  Cancellation w/ KNN
@@ -39,13 +40,8 @@ accuracy = function(x) {
 }
 ```
 
-```{r}
-tab = 1:100
-```
-
-
-Randomly obtain small subset of data:
-```{r}
+Created file, so no longer need to run this code. Storing it here with eval=F.
+```{r, eval=F}
 set.seed(216)
 ran = sample(1:nrow(df), 0.8 * nrow(df))
 df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
@@ -55,23 +51,17 @@ df_train = df_norm[ran, ] #%>% cbind(., )
 df_test = df_norm[-ran, ]
 df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
 df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
-```
-
-```{r}
 acc = vector("double", 100)
 sens = vector("double", 100)
 spec = vector("double", 100)
 options(width = 80)
-for (k in 1:2){
+for (k in 1:100){
   knn_output = knn(df_train, df_test, cl=df_target_category, k=k)
   confusion_matrix = table(knn_output, df_test_category)
   acc[[k]]= accuracy(confusion_matrix)
   sens[[k]]= confusion_matrix[2,2] / sum(confusion_matrix[,2])
   spec[[k]]= confusion_matrix[1,1] / sum(confusion_matrix[,1])
 }
-```
-
-```{r}
 k = as.integer(1:100)
 k_df = data.frame(
   k,
@@ -83,20 +73,31 @@ k_df = data.frame(
 
 % of people that cancelled their hotel booking
 ```{r}
-df$is_canceled %>% sum()/ count(df)
+sum(df$is_canceled)/ count(df)
 ```
-
-
-```{r}
-ggplot(as.data.frame(tab)) + geom_line(aes(x=Index, y=acc))
-```
-
 
 Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
 
 # Next Steps:
 
 - Visualize Metrics as K increases for KNN
+```{r}
+k_df_plot = k_df %>% 
+  rename(
+    "Accuracy"="acc",
+    "Sensitivity"="sens",
+    "Specificity"="spec"
+  ) %>%
+  gather(
+    "Accuracy":"Specificity", 
+    key="Metric", 
+    value="Value"
+    )
+ggplot(k_df_plot) + 
+  geom_line(aes(x=k, y=Value, color=Metric)) + 
+  ggtitle("Performance of k-NN model by k value")
+```
+
 - Calculate F1 score for both Logistic Regression and KNN + Visualize
 - Make a RF model w/ accomopanying metrics
 
