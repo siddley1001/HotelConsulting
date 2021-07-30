@@ -24,6 +24,7 @@ library(pracma)
 library(class)
 
 df = read_csv("hotel_booking.csv")
+k_df = read_csv("k_df.csv")
 ```
 
 # Question 2: Predicting  Cancellation w/ KNN
@@ -37,63 +38,104 @@ standardize = function(vector) {
 
 #divides correct prediction by total predictions
 accuracy = function(x) {
-  sum(diag(x)/(sum(rowSums(x)))) * 100
-}
-
-
-```
-
-```{r}
-tab = matrix(seq(1,100), ncol = 1, byrow = F)
-colnames(tab) = c("Index")
+  sum(diag(x)/(sum(rowSums(x))))
 ```
 
 
-Randomly obtain small subset of data:
-```{r}
+Created file, so no longer need to run this code. Storing it here with eval=F.
+```{r, eval=F}
 set.seed(216)
-ran = sample(1:nrow(df), 0.9 * nrow(df))
-
-df = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
-df_norm = as.data.frame(lapply(df[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr")], standardize)) #including hotel causes NANs
-
+ran = sample(1:nrow(df), 0.8 * nrow(df))
+df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
+df_norm = as.data.frame(lapply(df_hotel_binary[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr", "hotel")], standardize)) 
 #subset = df[sample(x=nrow(df), size=10000), ]
-
 df_train = df_norm[ran, ] #%>% cbind(., )
 df_test = df_norm[-ran, ]
-
 df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
 df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
-```
-
-```{r}
-acc = list()
+acc = vector("double", 100)
+sens = vector("double", 100)
+spec = vector("double", 100)
 options(width = 80)
-
-for (k in 1:20){
+for (k in 1:100){
   knn_output = knn(df_train, df_test, cl=df_target_category, k=k)
   confusion_matrix = table(knn_output, df_test_category)
-  
   acc[[k]]= accuracy(confusion_matrix)
+  sens[[k]]= confusion_matrix[2,2] / sum(confusion_matrix[,2])
+  spec[[k]]= confusion_matrix[1,1] / sum(confusion_matrix[,1])
 }
+k = as.integer(1:100)
+k_df = data.frame(
+  k,
+  acc,
+  sens,
+  spec
+)
 ```
 
 
+Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
+
+
+# Next Steps:
+
+- Visualize Metrics as K increases for KNN
 ```{r}
-tab = cbind(tab, acc)
-tab %>% unnest() %>% as.data.frame()
+k_df_plot = k_df %>% 
+  rename(
+    "Accuracy"="acc",
+    "Sensitivity"="sens",
+    "Specificity"="spec"
+  ) %>%
+  gather(
+    "Accuracy":"Specificity", 
+    key="Metric", 
+    value="Value"
+    )
+ggplot(k_df_plot) + 
+  geom_line(aes(x=k, y=Value, color=Metric)) + 
+  ggtitle("Performance of k-NN model by k value")
 ```
 
-% of people that cancelled their hotel booking
+- Calculate F1 score for both Logistic Regression and KNN + Visualize
+- Make a RF model w/ accomopanying metrics
+
+
+Make sure there aren't too many NA's (check)
 ```{r}
-df$is_canceled %>% sum()/ count(df)
+city_hotels2 = df %>% filter(hotel == "City Hotel", is_canceled == 0) %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month,stays_in_week_nights, stays_in_weekend_nights, adr) %>% mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% arrange(arrival_date_year, arrival_date_month, arrival_date_day_of_month)
+
+city_hotels2$arrival_date_month = as.integer(factor(city_hotels2$arrival_date_month, levels = month.name))
+
+city_hotels2 = city_hotels2 %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month, length_of_stay, adr) %>% unite("arrival_date", c("arrival_date_year", "arrival_date_month", "arrival_date_day_of_month"), sep = "/") %>% filter(adr != 0.00)
+
+city_hotels2$arrival_date <- as.Date(city_hotels2$arrival_date)
+city_hotels2 = city_hotels2 %>% arrange(arrival_date)  %>% group_by(arrival_date) %>% summarise(avg_length_of_stay = mean(length_of_stay), avg_adr = mean(adr))
+
+model_data_city = city_hotels2
+start_date = as.Date("2015-07-01")
+model_data_city$arrival_date <- as.numeric(difftime(model_data_city$arrival_date, start_date, unit = "days"))
+NumDays.city <- model_data_city$arrival_date
 ```
 
 
-```{r}
-ggplot(as.data.frame(tab)) + geom_line(aes(x=Index, y=acc))
+```{r, results="asis"}
+q1table = model_data_city %>% 
+  head(4) %>%
+  select(-avg_length_of_stay) %>%
+  mutate(arrival_date = as.integer(arrival_date)) %>%
+  xtable(
+    align="ccc", 
+    type="html")
+print(q1table, 
+      "html", 
+      include.rownames=FALSE,
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px")
 ```
-
 
 Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
 
@@ -104,4 +146,3 @@ Use cross validation to find accuracy for each k-value on that subset (maybe a r
 - Make a RF model w/ accomopanying metrics
 
 Make sure there aren't too many NA's (check)
-
