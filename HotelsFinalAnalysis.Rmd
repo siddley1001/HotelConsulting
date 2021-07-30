@@ -39,6 +39,7 @@ standardize = function(vector) {
 #divides correct prediction by total predictions
 accuracy = function(x) {
   sum(diag(x)/(sum(rowSums(x))))
+}
 ```
 
 
@@ -74,9 +75,12 @@ k_df = data.frame(
 ```
 
 
+<<<<<<< HEAD
+=======
 Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
 
 
+>>>>>>> f4c05e7aaa5482a2a3ba99b8957c5c7d8af73d03
 # Next Steps:
 
 - Visualize Metrics as K increases for KNN
