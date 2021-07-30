@@ -22,6 +22,7 @@ library(class)
 library(lubridate)
 library(pracma)
 library(class)
+
 df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
 ```
@@ -34,11 +35,13 @@ standardize = function(vector) {
   z = (vector-mean(vector))/sd(vector)
   return(z)
 }
+
 #divides correct prediction by total predictions
 accuracy = function(x) {
   sum(diag(x)/(sum(rowSums(x))))
 }
 ```
+
 
 Created file, so no longer need to run this code. Storing it here with eval=F.
 ```{r, eval=F}
@@ -71,11 +74,13 @@ k_df = data.frame(
 )
 ```
 
-% of people that cancelled their hotel booking
-```{r}
-sum(df$is_canceled)/ count(df)
-```
 
+<<<<<<< HEAD
+=======
+Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
+
+
+>>>>>>> f4c05e7aaa5482a2a3ba99b8957c5c7d8af73d03
 # Next Steps:
 
 - Visualize Metrics as K increases for KNN
@@ -99,6 +104,7 @@ ggplot(k_df_plot) +
 - Calculate F1 score for both Logistic Regression and KNN + Visualize
 - Make a RF model w/ accomopanying metrics
 
+
 Make sure there aren't too many NA's (check)
 ```{r}
 city_hotels2 = df %>% filter(hotel == "City Hotel", is_canceled == 0) %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month,stays_in_week_nights, stays_in_weekend_nights, adr) %>% mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% arrange(arrival_date_year, arrival_date_month, arrival_date_day_of_month)
@@ -115,6 +121,7 @@ start_date = as.Date("2015-07-01")
 model_data_city$arrival_date <- as.numeric(difftime(model_data_city$arrival_date, start_date, unit = "days"))
 NumDays.city <- model_data_city$arrival_date
 ```
+
 
 ```{r, results="asis"}
 q1table = model_data_city %>% 
