@@ -212,10 +212,7 @@ model_data_city$pred <- model.func(model_data_city$arrival_date)
 p1.trend + 
   geom_line(data = model_data_city, 
             aes(x = arrival_date, 
-                y = pred)) + 
-  geom_vline(xintercept = 792) + 
-  xlab("Arrival Date") + 
-  ylab("Average ADR")
+                y = pred)) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("City Hotel Predictions")
 ```
 
 ```{r, echo=F}
@@ -229,8 +226,10 @@ p2.trend = p2  +
 new = data.frame(arrival_date=793:1577)
 model_data_resort = bind_rows(model_data_resort, new)
 model_data_resort$pred <- model.func(model_data_resort$arrival_date)
-p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
+p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) +  + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("Resort Hotel Predictions")
 ```
+
+
 
 ```{r, echo=F, message=F}
 #Walker's
