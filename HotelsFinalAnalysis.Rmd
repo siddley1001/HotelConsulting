@@ -133,3 +133,13 @@ print(q1table,
                              frame='hsides',
                              border-spacing=5px")
 ```
+
+Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
+
+# Next Steps:
+
+- Visualize Metrics as K increases for KNN
+- Calculate F1 score for both Logistic Regression and KNN + Visualize
+- Make a RF model w/ accomopanying metrics
+
+Make sure there aren't too many NA's (check)
