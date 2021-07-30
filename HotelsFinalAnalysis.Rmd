@@ -128,9 +128,7 @@ model_data_resort$arrival_date <- as.numeric(
 NumDays.resort <- model_data_resort$arrival_date
 ```
 
-The dataset contains 119,319 bookings for two hotels located in Portugal over about 2 years. There are 32 variables included in the data set; our research questions concerned a select few.
-Our first question uses "arrival_date" to predict the variable "avg_adr". Our group combined the given variables arrival_date_year, arrival_date_month, and arrival_date_day_of_month into the variable arrival_date, which records the client's date of arrival in days since the earliest arrival date in the dataset: July 1, 2015. To do so, we converted each arrival date into a Date type, and used a function to obtain days elapsed. We created the variable "avg_adr" using the variable "adr". ADR is defined as the client's total transaction costs divided by their staying days. In creating "avg_adr", we calculated the mean ADR value for one day for each hotel. Doing so facilitated easy observation of the oscillating relationship between avg_adr and arrival_date, which provided the motivation for our first question. 
-Our second question predicts the variable "is_canceled", which has a value of 1 if the booking was canceled, and 0 otherwise. Analysis revealed that certain variables had a statistically significant relationship with is_canceled. The following are the variables we analyzed. "Hotel" describes whether the observation was at the city hotel or the resort hotel. "is_repeated_guest" is a binary variable, valued at 1 if the guest has booked previously. "lead_time" describes the number of days between entrance into the booking system and the customer's arrival. "previous_bookings_not_canceled" describes the number of the client's previous bookings that were not canceled, while "previous_cancellations" describes those that were canceled.
+The dataset contains 119,319 bookings for two hotels located in Portugal over about 2 years. There are 32 variables included in the data set; our research questions concerned a select few. Our first question uses "arrival_date" to predict the variable "avg_adr". Our group combined the given variables arrival_date_year, arrival_date_month, and arrival_date_day_of_month into the variable arrival_date, which records the client's date of arrival in days since the earliest arrival date in the dataset: July 1, 2015. To do so, we converted each arrival date into a Date type, and used a function to obtain days elapsed. We created the variable "avg_adr" using the variable "adr". ADR is defined as the client's total transaction costs divided by their staying days. In creating "avg_adr", we calculated the mean ADR value for one day for each hotel. Doing so facilitated easy observation of the oscillating relationship between avg_adr and arrival_date, which provided the motivation for our first question. 
 
 Data table for Q1: 
 
@@ -151,6 +149,42 @@ print(q1table,
                              frame='hsides',
                              border-spacing=5px")
 
+```
+
+Our second question predicts the variable "is_canceled", which has a value of 1 if the booking was canceled, and 0 otherwise. Analysis revealed that certain variables had a statistically significant relationship with is_canceled. The following are the variables we analyzed. "Hotel" describes whether the observation was at the city hotel or the resort hotel. "is_repeated_guest" is a binary variable, valued at 1 if the guest has booked previously. "lead_time" describes the number of days between entrance into the booking system and the customer's arrival. "previous_bookings_not_canceled" describes the number of the client's previous bookings that were not canceled, while "previous_cancellations" describes those that were canceled.
+
+Data Table for Q2:
+
+```{r, results="asis", echo=F}
+q2table = (df %>% select(
+  is_canceled,
+  hotel,
+  is_repeated_guest,
+  adr,
+  lead_time,
+  previous_bookings_not_canceled,
+  previous_cancellations
+  ) %>% 
+  filter(adr!= 0))[3:7,] %>%
+  mutate(
+    is_canceled=as.integer(is_canceled),
+    is_repeated_guest=as.integer(is_repeated_guest),
+    lead_time=as.integer(lead_time),
+    previous_bookings_not_canceled = as.integer(previous_bookings_not_canceled),
+    previous_cancellations = as.integer(previous_cancellations)
+  ) %>%
+  xtable(
+    align="cccccccc", 
+    type="html"
+    )
+print(q2table,
+      "html",
+      include.rownames=FALSE,
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px")
 ```
 
 # Results
@@ -198,7 +232,7 @@ model_data_resort$pred <- model.func(model_data_resort$arrival_date)
 p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
 ```
 
-```{r, echo=F}
+```{r, echo=F, message=F}
 #Walker's
 h <- read.csv("hotel_booking.csv")
 h2 = h %>% 
@@ -518,7 +552,7 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc3 = ifelse(predicted_canc3 > 0.5,1,0))
 ```
 
-```{r}
+```{r, echo=F}
 #standardize dataset for k-NN and RandomForest
 standardize = function(vector) {
   return(sd(vector)*vector + 
@@ -533,7 +567,7 @@ accuracy = function(x) {
 ```
 
 
-```{r, eval=F, include=F}
+```{r, eval=T, include=F}
 #Model4: k-NN, k=11
 
 df_knn = df_test %>%
@@ -572,18 +606,17 @@ df_test = bind_cols(df_test, df_knn) %>%
   mutate(predicted_canc4 = as.integer(predicted_canc4)-1)
 ```
 
-```{r, echo=F}
+```{r, eval=F, echo=F}
+library(randomForest)
 #RandomForest
 set.seed(216)
 ran = sample(1:nrow(df), 0.8 * nrow(df))
 
-df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
+df_hotel_binary = df %>% 
+  mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
 df_norm = as.data.frame(lapply(df_hotel_binary[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr", "hotel")], standardize)) 
 
 #subset = df[sample(x=nrow(df), size=10000), ]
-
-df_train = df_norm[ran, ] %>% cbind(., df[ran, "is_canceled"] )
-df_test = df_norm[-ran, ] %>% cbind(., df[-ran, "is_canceled"] )
 
 #df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
 #df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
