@@ -27,12 +27,9 @@ df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
 ```
 
-# Question 2: Predicting  Cancellation
+# Question 2: Which model best predicts cancellation?
 
-Analysis of significant variables:
-```{r, include=F}
-library(MASS)
-```
+## Analysis of significant variables:
 
 ```{r, echo=F}
 leadgraph = df %>% 
@@ -66,7 +63,7 @@ adrgraph$key=rep("Average ADR", 2)
 fullgraph = bind_rows(leadgraph, prevgraph, prevuncancgraph, adrgraph)
 
 ggplot(fullgraph, aes(x=`as.logical(is_canceled)`, y=value)) + 
-  geom_col() + 
+  geom_col(fill="slateblue") + 
   facet_wrap(~key, scales = "free")
   
 hotelgraph = df %>%
@@ -95,10 +92,11 @@ repeatgraph$value=as.character(repeatgraph$value)
 fullgraph2 = bind_rows(hotelgraph, repeatgraph)
 
 ggplot(fullgraph2, aes(x=value, y=prop_canceled)) + 
-  geom_col() + 
+  geom_col(fill="slateblue") + 
   facet_wrap(~key, scales="free")
-detach("package:MASS", unload = TRUE)
 ```
+
+Below are the p-values for the above relationships. The P values for the first 4 variables were calculated using a T-test. The P values for the last 2 were calculated using a two proportion Z-test.
 
 ```{r, results="asis", echo=F}
 pvals = c()
@@ -143,11 +141,20 @@ print(to_print,
       )
 ```
 
-Building logistic, k-NN, and RandomTrees models
+# Building models: 
 
-Data cleaning:
+Model 1: logistic
 
-```{r, echo=F}
+Model 2: step-wise logistic
+
+Model 3: logistic with two-fold interaction
+
+Model 4: k-NN, with k=5
+
+**Need to add RandomTrees models**
+
+```{r, include=F}
+#Data cleaning
 library(MASS)
 df_log = df %>%
   dplyr::select(hotel,
@@ -169,9 +176,8 @@ df_test= df_test %>%
   subset(select= -id)
 ```
 
-Model 1: Logistic
-
 ```{r, include=F}
+#Model 1: Logistic
 model1 = glm(
   is_canceled~., 
   family="binomial",
@@ -186,9 +192,31 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc1 = ifelse(predicted_canc1 > 0.5,1,0))
 ```
 
-Model 2: Stepwise logistic
+The logistic models performed the same in terms of accuracy, sensitivity, and specificity. Here is a table of coefficients for the simple logistic model:
 
-```{r}
+```{r, results="asis", echo=F}
+log_table = tidy(model1)[,c("term", "estimate", "p.value")] %>%
+  rename(Term="term",
+         Estimate="estimate",
+         P.value="p.value") %>%
+  mutate(Estimate=format(round(Estimate, 4), nsmall=4),
+         P.value=formatC(P.value, format="e", digits = 3))
+
+to_print_log_mod = log_table %>% 
+  xtable(align="cccc")
+print(to_print_log_mod, 
+      "html", 
+      include.rownames=F,
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px"
+)
+```
+
+```{r, include=F}
+#Model 2: Stepwise logistic
 model2 = stepAIC(model1)
 
 df_test = df_test %>% add_predictions(
@@ -197,14 +225,13 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc2 = ifelse(predicted_canc2 > 0.5,1,0))
 ```
 
-Model 3: Logistic with twofold interaction
-
-```{r}
+```{r, include=F}
+#Model 3: Logistic with twofold interaction
 model3 = glm(
   is_canceled~.^2, 
   family="binomial",
   data=df_train)
-tidy(model3)[,c("term", "estimate", "p.value")]
+tidy(model3)[,c("term", "estimate", "p.value")] #make tables using these tibbles?
 
 df_test = df_test %>% add_predictions(
   model3,
@@ -212,9 +239,9 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc3 = ifelse(predicted_canc3 > 0.5,1,0))
 ```
 
-Model4: k-NN, k=5
+```{r, include=F}
+#Model4: k-NN, k=5
 
-```{r}
 #standardize dataset
 standardize = function(vector) {
   return(sd(vector)*vector + 
@@ -260,7 +287,7 @@ df_test = bind_cols(df_test, df_knn) %>%
 
 Metrics:
 
-```{r, results="asis"}
+```{r, results="asis", echo=F}
 #input df_test$predicted_canc1, or 2, etc.
 sensitivity = function(predicted_canc) {
   return(
@@ -284,26 +311,27 @@ accuracy = function(predicted_canc) {
 }
 
 metrics_table = tribble(
-  ~Model, ~sensitivity, ~specificity, ~accuracy,
+  ~Model, ~Sensitivity, ~Specificity, ~Accuracy,
   1, sensitivity(df_test$predicted_canc1), specificity(df_test$predicted_canc1), accuracy(df_test$predicted_canc1),
   2, sensitivity(df_test$predicted_canc2), specificity(df_test$predicted_canc2), accuracy(df_test$predicted_canc2),
   3, sensitivity(df_test$predicted_canc3), specificity(df_test$predicted_canc3), accuracy(df_test$predicted_canc3),
   4, sensitivity(df_test$predicted_canc4), specificity(df_test$predicted_canc4), accuracy(df_test$predicted_canc4)
-)
+) %>% mutate(Model=as.integer(Model))
 
 to_print1 = metrics_table %>% 
   xtable(align="ccccc")
 print(to_print1, 
       "html", 
+      include.rownames=F,
       html.table.attributes="align='center',
                              rules='rows',
                              width=50%,
                              frame='hsides',
                              border-spacing=5px"
 )
+```
+```{r, include=F}
 detach("package:MASS", unload = TRUE)
-
-df %>% filter(is_canceled==1)
 ```
 
 Formulas
@@ -354,8 +382,6 @@ k_df = data.frame(
 
 Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
 
-
->>>>>>> f4c05e7aaa5482a2a3ba99b8957c5c7d8af73d03
 # Next Steps:
 
 - Visualize Metrics as K increases for KNN
