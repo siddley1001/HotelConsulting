@@ -27,11 +27,14 @@ df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
 ```
 
-# Question 2: Predicting  Cancellation w/ KNN
+# Question 2: Predicting  Cancellation
 
 Analysis of significant variables:
-```{r}
+```{r, include=F}
 library(MASS)
+```
+
+```{r, results="asis", echo=F}
 leadgraph = df %>% 
   group_by(as.logical(is_canceled)) %>%
   summarize(avg_lead_time = mean(lead_time)) %>% 
@@ -121,6 +124,168 @@ ggplot(fullgraph2, aes(x=value, y=prop_canceled)) +
 detach("package:MASS", unload = TRUE)
 ```
 
+Building logistic, k-NN, and RandomTrees models
+
+Data cleaning:
+
+```{r, echo=F}
+library(MASS)
+df_log = df %>%
+  dplyr::select(hotel,
+         is_canceled,
+         lead_time,
+         previous_cancellations,
+         previous_bookings_not_canceled,
+         adr,
+         is_repeated_guest
+         ) %>% mutate(id=row_number())
+
+set.seed(216)
+df_train=df_log %>% 
+  sample_frac(0.80)
+df_test=anti_join(df_log, df_train, by='id')
+df_train= df_train %>%
+  subset(select = -id)
+df_test= df_test %>%
+  subset(select= -id)
+```
+
+Model 1: Logistic
+
+```{r, include=F}
+model1 = glm(
+  is_canceled~., 
+  family="binomial",
+  data=df_train)
+
+options("scipen"=100, "digits"=4)
+summary(model1)
+
+df_test = df_test %>% add_predictions(
+  model1,
+  var="predicted_canc1") %>%
+  mutate(predicted_canc1 = ifelse(predicted_canc1 > 0.5,1,0))
+```
+
+Model 2: Stepwise logistic
+
+```{r}
+model2 = stepAIC(model1)
+
+df_test = df_test %>% add_predictions(
+  model2,
+  var="predicted_canc2") %>%
+  mutate(predicted_canc2 = ifelse(predicted_canc2 > 0.5,1,0))
+```
+
+Model 3: Logistic with twofold interaction
+
+```{r}
+model3 = glm(
+  is_canceled~.^2, 
+  family="binomial",
+  data=df_train)
+tidy(model3)[,c("term", "estimate", "p.value")]
+
+df_test = df_test %>% add_predictions(
+  model3,
+  var="predicted_canc3") %>%
+  mutate(predicted_canc3 = ifelse(predicted_canc3 > 0.5,1,0))
+```
+
+Model4: k-NN, k=5
+
+```{r}
+#standardize dataset
+standardize = function(vector) {
+  return(sd(vector)*vector + 
+           mean(vector)
+              )
+}
+
+df_knn = df_test %>%
+  mutate(
+    previous_cancellations=standardize(previous_cancellations),
+    previous_bookings_not_canceled=standardize(previous_bookings_not_canceled),
+    hotel=ifelse(hotel=="Resort Hotel", 1, 0),
+    hotel=standardize(hotel),
+    lead_time=standardize(lead_time),
+    adr=standardize(adr)
+    ) %>% 
+  mutate(predicted_canc4=knn(
+    train=dplyr::select(
+      df_train,
+      lead_time,
+      adr,
+      previous_cancellations
+      ),
+    test=dplyr::select(
+      df_test,
+      lead_time,
+      adr,
+      previous_cancellations
+    ),
+    cl=
+      factor(
+      df_train$is_canceled,
+      levels=c(0,1),
+      labels=c("0","1")
+    ),
+    k=5)
+  ) %>%
+  dplyr::select(predicted_canc4)
+
+df_test = bind_cols(df_test, df_knn) %>%
+  mutate(predicted_canc4 = as.integer(predicted_canc4)-1)
+```
+
+Metrics:
+
+```{r, results="asis"}
+#input df_test$predicted_canc1, or 2, etc.
+sensitivity = function(predicted_canc) {
+  return(
+    sum(df_test$is_canceled & predicted_canc) /
+      sum(df_test$is_canceled)
+  )
+}
+
+specificity = function(predicted_canc) {
+  return(
+    sum(!df_test$is_canceled & !predicted_canc) /
+      sum(!df_test$is_canceled)
+  )
+}
+
+accuracy = function(predicted_canc) {
+  (
+  sum(df_test$is_canceled & predicted_canc) + 
+    sum(!df_test$is_canceled & !predicted_canc)
+  ) / nrow(df_test)
+}
+
+metrics_table = tribble(
+  ~Model, ~sensitivity, ~specificity, ~accuracy,
+  1, sensitivity(df_test$predicted_canc1), specificity(df_test$predicted_canc1), accuracy(df_test$predicted_canc1),
+  2, sensitivity(df_test$predicted_canc2), specificity(df_test$predicted_canc2), accuracy(df_test$predicted_canc2),
+  3, sensitivity(df_test$predicted_canc3), specificity(df_test$predicted_canc3), accuracy(df_test$predicted_canc3),
+  4, sensitivity(df_test$predicted_canc4), specificity(df_test$predicted_canc4), accuracy(df_test$predicted_canc4)
+)
+
+to_print1 = metrics_table %>% 
+  xtable(align="ccccc")
+print(to_print1, 
+      "html", 
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px"
+)
+detach("package:MASS", unload = TRUE)
+
+df %>% filter(is_canceled==1)
+```
 
 Formulas
 ```{r}
