@@ -213,7 +213,7 @@ print(to_print_log_mod,
 )
 ```
 
-```{r, include=F}
+```{r, include=F, eval=F}
 #Model 2: Stepwise logistic
 model2 = stepAIC(model1)
 
@@ -223,7 +223,7 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc2 = ifelse(predicted_canc2 > 0.5,1,0))
 ```
 
-```{r, include=F}
+```{r, include=F, eval=F}
 #Model 3: Logistic with twofold interaction
 model3 = glm(
   is_canceled~.^2, 
@@ -408,25 +408,8 @@ k_df = data.frame(
 
 # Next Steps:
 
-- Visualize Metrics as K increases for KNN
-```{r, echo=F}
-k_df_plot = k_df %>% 
-  rename(
-    "Accuracy"="acc",
-    "Sensitivity"="sens",
-    "Specificity"="spec"
-  ) %>%
-  gather(
-    "Accuracy":"Specificity", 
-    key="Metric", 
-    value="Value"
-    )
-ggplot(k_df_plot) + 
-  geom_line(aes(x=k, y=Value, color=Metric)) + 
-  ggtitle("Performance of k-NN model by k value")
-```
-
-- Calculate F1 score for both Logistic Regression and KNN + Visualize
+-Incorporate RF model into ModelPerformance, and Model selection?
+- ?Calculate F1 score for both Logistic Regression and KNN + Visualize
 - Make a RF model w/ accomopanying metrics
 
 
