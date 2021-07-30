@@ -158,7 +158,7 @@ print(q1table,
 
 ## Question 1: Can we predict future room rates with confidence?
 
-```{r, echo=F}
+```{r, echo=F, fig.align="center", fig.width=6, fig.height=6, fig.cap="Figure 1: }
 xc <- cos(2*pi*model_data_city$arrival_date/365.25)
 xs <- sin(2*pi*model_data_city$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_city)
@@ -168,13 +168,21 @@ model.func = function(day){
     fit.lm$coefficients[[1]] + fit.lm$coefficients[[2]]*cos(2*pi*day/365.25) + fit.lm$coefficients[[3]]*sin(2*pi*day/365.25) + fit.lm$coefficients[[4]]*day
   )
 }
-p1 <- ggplot() + geom_point(data = model_data_city, aes(x = arrival_date, y = avg_adr)) + geom_hline(aes(yintercept=0))
+p1 <- ggplot() + 
+  geom_point(data = model_data_city, aes(x = arrival_date, y = avg_adr)) + 
+  geom_hline(aes(yintercept=0))
 p1.trend = p1  + 
   geom_line(data = model_data_city, aes(x = arrival_date, y = pred1), color="red", size = 2)
 new = data.frame(arrival_date=793:1577)
 model_data_city = bind_rows(model_data_city, new)
 model_data_city$pred <- model.func(model_data_city$arrival_date)
-p1.trend + geom_line(data = model_data_city, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
+p1.trend + 
+  geom_line(data = model_data_city, 
+            aes(x = arrival_date, 
+                y = pred)) + 
+  geom_vline(xintercept = 792) + 
+  xlab("Arrival Date") + 
+  ylab("Average ADR")
 ```
 
 ```{r, echo=F}
@@ -191,7 +199,8 @@ model_data_resort$pred <- model.func(model_data_resort$arrival_date)
 p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
 ```
 
-```{r}
+```{r, echo=F}
+#Walker's
 h <- read.csv("hotel_booking.csv")
 h2 = h %>% 
   select(hotel, 
