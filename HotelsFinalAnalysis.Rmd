@@ -76,19 +76,19 @@ city_hotels2 = cleaned1 %>%
 resort_hotels2 = cleaned1 %>%
   filter(hotel == "Resort Hotel")
 
-city_hotels2 = city_hotels2 %>% 
-  dplyr::select(
-    arrival_date_year, 
-    arrival_date_month, 
-    arrival_date_day_of_month, 
-    length_of_stay, 
-    adr) %>% 
-  unite("arrival_date", 
-        c("arrival_date_year", 
-          "arrival_date_month", 
-          "arrival_date_day_of_month"), 
-        sep = "/") %>% 
-  filter(adr != 0.00)
+# city_hotels2 = city_hotels2 %>% 
+#   dplyr::select(
+#     arrival_date_year, 
+#     arrival_date_month, 
+#     arrival_date_day_of_month, 
+#     length_of_stay, 
+#     adr) %>% 
+#   unite("arrival_date", 
+#         c("arrival_date_year", 
+#           "arrival_date_month", 
+#           "arrival_date_day_of_month"), 
+#         sep = "/") %>% 
+#   filter(adr != 0.00)
 
 city_hotels2$arrival_date <- as.Date(city_hotels2$arrival_date)
 city_hotels2 = city_hotels2 %>% 
@@ -129,10 +129,9 @@ Data table for Q1:
 #Table for Q1
 q1table = model_data_city %>% 
   head(4) %>%
-  select(-avg_length_of_stay) %>%
   mutate(arrival_date = as.integer(arrival_date)) %>%
   xtable(
-    align="ccc", 
+    align=c("c","c","c"),
     type="html")
 print(q1table, 
       "html", 
@@ -167,7 +166,7 @@ model_data_city$pred <- model.func(model_data_city$arrival_date)
 p1.trend + geom_line(data = model_data_city, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
 ```
 
-```{r}
+```{r, echo=F}
 xc <- cos(2*pi*model_data_resort$arrival_date/365.25)
 xs <- sin(2*pi*model_data_resort$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_resort)
