@@ -1,0 +1,130 @@
+---
+title: "RandomForestCancel"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Random Forest
+```{r}
+library(tidyverse)
+library(countrycode)
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(xtable)
+library(modelr)
+library(broom)
+library(class)
+library(lubridate)
+library(pracma)
+library(class)
+library(randomForest)
+
+#install.packages("ROCR")
+library(ROCR)
+
+
+df = read_csv("hotel_booking.csv")
+```
+
+```{r}
+standardize = function(vector) {
+  z = (vector-mean(vector))/sd(vector)
+  return(z)
+}
+
+#divides correct prediction by total predictions
+accuracy = function(x) {
+  sum(diag(x)/(sum(rowSums(x)))) * 100
+}
+```
+
+```{r}
+set.seed(216)
+ran = sample(1:nrow(df), 0.8 * nrow(df))
+
+df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
+df_norm = as.data.frame(lapply(df_hotel_binary[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr", "hotel")], standardize)) 
+
+#subset = df[sample(x=nrow(df), size=10000), ]
+
+df_train = df_norm[ran, ] %>% cbind(., df[ran, "is_canceled"] )
+df_test = df_norm[-ran, ] %>% cbind(., df[-ran, "is_canceled"] )
+
+#df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
+#df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
+df_train$is_canceled = df_train$is_canceled %>% as.factor()
+
+```
+
+```{r}
+rf = randomForest(is_canceled~ previous_cancellations+previous_bookings_not_canceled+lead_time+adr+hotel,
+                  data = df_train,
+                  ntree=100)
+print(rf)
+```
+
+```{r}
+rf1 = randomForest(is_canceled~.,
+                  data = df_train,
+                  ntree=100)
+print(rf1)
+```
+
+```{r}
+rf2 = randomForest(is_canceled~.,
+                  data = df_train,
+                  ntree=500)
+print(rf2)
+```
+
+```{r}
+pred=predict(rf,type = "prob")
+
+perf = prediction(pred[,2], df_train$is_canceled)
+
+# 1. Area under curve
+auc= performance(perf, "auc")
+auc
+# 2. True Positive and Negative Rate
+pred = performance(perf, "tpr","fpr")
+# 3. Plot the ROC curve
+plot(pred,main="ROC Curve for Random Forest model 1",col=2,lwd=2)
+abline(a=0,b=1,lwd=2,lty=2,col="gray")
+```
+
+
+```{r}
+pred1=predict(rf1,type = "prob")
+
+perf1 = prediction(pred1[,2], df_train$is_canceled)
+
+# 1. Area under curve
+auc1= performance(perf1, "auc")
+auc1
+# 2. True Positive and Negative Rate
+pred1 = performance(perf1, "tpr","fpr")
+# 3. Plot the ROC curve
+plot(pred1,main="ROC Curve for Random Forest model 2",col=2,lwd=2)
+abline(a=0,b=1,lwd=2,lty=2,col="gray")
+```
+
+
+```{r}
+pred2=predict(rf2,type = "prob")
+
+perf2 = prediction(pred2[,2], df_train$is_canceled)
+
+# 1. Area under curve
+auc2 = performance(perf2, "auc")
+auc2
+# 2. True Positive and Negative Rate
+pred2 = performance(perf2, "tpr","fpr")
+# 3. Plot the ROC curve
+plot(pred2,main="ROC Curve for Random Forest model 3",col=2,lwd=2)
+abline(a=0,b=1,lwd=2,lty=2,col="gray")
+```
+
