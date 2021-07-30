@@ -347,11 +347,11 @@ ggplot()+
     size=1,
     color="red",
     alpha=.25)+
-  xlab("Arrival Date")+
+  xlab("Time Elapsed Since 1 July 2015 (days)")+
   ylab("Average Adr")+
   theme_classic()+
   ggtitle("Forecasted Average ADR")+
-  geom_vline(xintercept = 793,linetype=3)+
+  geom_vline(xintercept = 793,linetype=1,alpha=.05)+
   geom_line(
     mapping=aes(
       x=mod$arrival_date,
@@ -364,9 +364,10 @@ ggplot()+
       y=mod$pred+(2*f_density(mod$arrival_date)*RMSError)),
       xseq=793:1577,
       se=FALSE,
-      color="gray",
+      color="red",
       alpha=.25,
-      linetype=3
+      linetype=1,
+      size=.5
     )+
   geom_smooth(
     mapping=aes(
@@ -374,11 +375,15 @@ ggplot()+
       y=mod$pred-(2*f_density(mod$arrival_date)*RMSError)),
       xseq=793:1577,
       se=FALSE,
-      color="gray",
+      color="red",
       alpha=.25,
-      linetype=3
-    )
-
+      linetype=1,
+    size=.5
+    )+
+  geom_vline(xintercept=365.25/2,color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5)
 ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
 ```
 Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMS Error of 13.31. Our second chart, "Accuracy of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
