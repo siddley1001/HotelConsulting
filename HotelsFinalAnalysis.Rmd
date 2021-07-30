@@ -28,6 +28,12 @@ df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
 ```
 
+<center>
+
+![Vila Vita Resort in Algarve, Portugal. Provided by The Leading Hotels of the World.](lw1306_82442005_720x450.jpg)
+
+</center>
+
 # Introduction
 
 Our group used data describing hotel bookings from two hotels in Portugal to answer questions relevant to the travel industry. Firstly, we asked whether we could predict room rates with confidence. Such a tool would be useful for travel agencies, hotels and customers. Although hotels can provide rates only for a finite number of months, a model that predicts future rates may enable travel agencies to book vacations further into the future. Using such a model, travel agencies would provide more utility to both customers and hotels. Customers could have more booking options with greater certainty as to price, while hotels could increase ease of transaction. Hotels could also understand demand patterns earlier, and thus prepare their budget accordingly.
