@@ -2,12 +2,14 @@
 title: "HotelsFinalAnalysis"
 author: "Walker Burgin, Tara Ghorpadkar, David Snider, Sid Vanam"
 date: "7/27/2021"
-output: html_document
+output: 
+  html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 
 ```{r,include=F}
 library(tidyverse)
@@ -37,6 +39,7 @@ k_df = read_csv("k_df.csv")
 # Introduction
 
 Our group used data describing hotel bookings from two hotels in Portugal to answer questions relevant to the travel industry. Firstly, we asked whether we could predict room rates with confidence. Such a tool would be useful for travel agencies, hotels and customers. Although hotels can provide rates only for a finite number of months, a model that predicts future rates may enable travel agencies to book vacations further into the future. Using such a model, travel agencies would provide more utility to both customers and hotels. Customers could have more booking options with greater certainty as to price, while hotels could increase ease of transaction. Hotels could also understand demand patterns earlier, and thus prepare their budget accordingly.
+
 Secondly, we asked which model best predicts cancellation. In our dataset, about one third (0.37) of bookings ended up getting canceled. Hotels that can predict cancellation can modify operations accordingly. For example, when asking if a customer wishes to be put on a waitlist, the booker can inform them of the likelihood of a cancellation that could give them a room. Alternatively, a hotel could double book a proportion of rooms that are predicted to be canceled - a risk, but perhaps a profitable one. 
 
 # Data
@@ -155,7 +158,7 @@ print(q1table,
 
 ## Question 1: Can we predict future room rates with confidence?
 
-```{r, echo=F}
+```{r, echo=F, fig.align="center", fig.width=6, fig.height=6, fig.cap="Figure 1: }
 xc <- cos(2*pi*model_data_city$arrival_date/365.25)
 xs <- sin(2*pi*model_data_city$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_city)
@@ -165,13 +168,21 @@ model.func = function(day){
     fit.lm$coefficients[[1]] + fit.lm$coefficients[[2]]*cos(2*pi*day/365.25) + fit.lm$coefficients[[3]]*sin(2*pi*day/365.25) + fit.lm$coefficients[[4]]*day
   )
 }
-p1 <- ggplot() + geom_point(data = model_data_city, aes(x = arrival_date, y = avg_adr)) + geom_hline(aes(yintercept=0))
+p1 <- ggplot() + 
+  geom_point(data = model_data_city, aes(x = arrival_date, y = avg_adr)) + 
+  geom_hline(aes(yintercept=0))
 p1.trend = p1  + 
   geom_line(data = model_data_city, aes(x = arrival_date, y = pred1), color="red", size = 2)
 new = data.frame(arrival_date=793:1577)
 model_data_city = bind_rows(model_data_city, new)
 model_data_city$pred <- model.func(model_data_city$arrival_date)
-p1.trend + geom_line(data = model_data_city, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
+p1.trend + 
+  geom_line(data = model_data_city, 
+            aes(x = arrival_date, 
+                y = pred)) + 
+  geom_vline(xintercept = 792) + 
+  xlab("Arrival Date") + 
+  ylab("Average ADR")
 ```
 
 ```{r, echo=F}
@@ -188,7 +199,8 @@ model_data_resort$pred <- model.func(model_data_resort$arrival_date)
 p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
 ```
 
-```{r}
+```{r, echo=F}
+#Walker's
 h <- read.csv("hotel_booking.csv")
 h2 = h %>% 
   select(hotel, 
