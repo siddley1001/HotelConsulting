@@ -20,7 +20,7 @@ library(lubridate)
 library(pracma)
 
 # Import Data Below
-df = read_csv("/Users/tg/Downloads/hotel_bookings.csv")
+df = read_csv("hotel_booking.csv")
 
 #Initial Data Manipulations
 df = df %>% mutate_if(is.character, as.factor)
@@ -38,7 +38,7 @@ df$arrival_date_month <- factor(df$arrival_date_month, levels = month.name)
 
 
 ```{r}
-hotels <- read_csv("/Users/tg/Downloads/hotel_bookings.csv")
+hotels <- read_csv("hotel_booking.csv")
 hotels_refined = hotels %>% select(hotel, arrival_date_month, arrival_date_day_of_month, arrival_date_year, country ,adr, is_canceled) %>% rename(Hotel_Type = hotel, Country_of_Origin = country, Arrival_month = arrival_date_month, Arrival_date = arrival_date_day_of_month, Arrival_year = arrival_date_year, Average_Daily_Rate = adr)
 
 month_levels <- c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
@@ -322,7 +322,7 @@ detach("package:MASS", unload = TRUE)
 ### Q1: Are bookings by travel agents and tour operators (TA/TO) more likely to get cancelled than direct bookings?
 
 ```{r}
-hotel_bookings <- read_csv("/Users/tg/Downloads/hotel_bookings.csv")
+hotel_bookings <- read_csv("hotel_booking.csv")
 pop_Mean_canceled = mean(hotel_bookings$is_canceled)
 pop_Mean_canceled #our population sample
 ```
