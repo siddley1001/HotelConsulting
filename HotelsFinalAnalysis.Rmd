@@ -1,6 +1,6 @@
 ---
 title: "HotelsFinalAnalysis"
-author: "David Snider"
+author: "Walker Burgin, Tara Ghorpadkar, David Snider, Sid Vanam"
 date: "7/27/2021"
 output: html_document
 ---
@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r,include=F}
 library(tidyverse)
 library(countrycode)
 library(rvest)
@@ -103,16 +103,30 @@ detach("package:MASS", unload = TRUE)
 ```{r, results="asis", echo=F}
 pvals = c()
 
-pvals = c(pvals, t.test(df$lead_time~as.logical(df$is_canceled))$p.value[[1]])
-pvals = c(pvals, t.test(df$previous_cancellations~as.logical(df$is_canceled))$p.value[[1]])
-pvals = c(pvals, t.test(df$previous_bookings_not_canceled~as.logical(df$is_canceled))$p.value[[1]])
-pvals = c(pvals, t.test(df$adr~as.logical(df$is_canceled))$p.value[[1]])
-
+pvals = c(
+  t.test(df$lead_time~as.logical(df$is_canceled))$p.value[[1]],
+  t.test(df$previous_cancellations~as.logical(df$is_canceled))$p.value[[1]],
+  t.test(df$previous_bookings_not_canceled~as.logical(df$is_canceled))$p.value[[1]],
+  t.test(df$adr~as.logical(df$is_canceled))$p.value[[1]],
+  (prop.test(x=hotelgraph$num_canceled, 
+             n=hotelgraph$n,
+             p=NULL,
+             alternative = "two.sided",
+             correct=TRUE))$p.value[[1]],
+  (prop.test(x=repeatgraph$num_canceled, 
+             n=repeatgraph$n,
+             p=NULL,
+             alternative = "two.sided",
+             correct=TRUE))$p.value[[1]]
+)
+pvals=formatC(x=pvals, format="e", digits=2)
 
 vars = c("Average Lead Time",
          "Average Previous Cancellations",
          "Average Previous Bookings Not Canceled",
-         "Average ADR")
+         "Average ADR",
+         "Hotel",
+         "Is Repeated Customer?")
 
 pvaltable = data.frame(Variables = vars, "P values" = pvals)
 pvaltable$P.values = as.character(pvaltable$P.values)
@@ -120,35 +134,7 @@ to_print = pvaltable %>%
   xtable(align="ccc")
 print(to_print, 
       "html", 
-      html.table.attributes="align='center',
-                             rules='rows',
-                             width=50%,
-                             frame='hsides',
-                             border-spacing=5px"
-      )
-
-pvals2 = c(
-  (prop.test(x=hotelgraph$num_canceled, 
-          n=hotelgraph$n,
-          p=NULL,
-          alternative = "two.sided",
-          correct=TRUE))$p.value[[1]],
-  (prop.test(x=repeatgraph$num_canceled, 
-          n=repeatgraph$n,
-          p=NULL,
-          alternative = "two.sided",
-          correct=TRUE))$p.value[[1]]
-)
-
-vars2 = c("Hotel",
-          "Is Repeated Customer?")
-
-pvaltable2 = data.frame(Variable = vars2, "P values" = pvals2)
-pvaltable2$P.values = as.character(pvaltable2$P.values)
-to_print = pvaltable2 %>% 
-  xtable(align="ccc")
-print(to_print, 
-      "html", 
+      include.rownames=F,
       html.table.attributes="align='center',
                              rules='rows',
                              width=50%,
