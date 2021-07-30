@@ -188,7 +188,114 @@ model_data_resort$pred <- model.func(model_data_resort$arrival_date)
 p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
 ```
 
+```{r}
+h <- read.csv("hotel_booking.csv")
+h2 = h %>% 
+  select(hotel, 
+         arrival_date_month, 
+         arrival_date_day_of_month, 
+         arrival_date_year, 
+         country,
+         adr, 
+         is_canceled) %>% 
+  rename(tp = hotel, 
+         ogn = country, 
+         aM = arrival_date_month, 
+         aD = arrival_date_day_of_month, 
+         aY = arrival_date_year, 
+         adr = adr)
+month_levels <- c("January", "February", "March", "April", 
+                  "May", "June", "July", "August", 
+                  "September", "October", "November", "December")
+repeat_levels <- c(0, 1)
+h2$aM =  factor(h2$aM,levels = month_levels)
+ct_h = h2 %>% 
+  filter(tp == "City Hotel", is_canceled == 0) %>% 
+  filter(ogn != "NULL")
+rst_h = h2 %>% 
+  filter(tp == "Resort Hotel", is_canceled == 0) %>% 
+  filter(ogn != "NULL")
+ct_h_freq = ct_h%>% 
+  filter(adr != 0.00)%>% 
+  group_by(ogn, aM) %>% 
+  summarise(n = n()) %>% 
+  mutate(frequency = n/sum(n))
+rst_h_freq = rst_h %>% 
+  filter(adr != 0.00)%>% 
+  group_by(ogn, aM) %>% 
+  summarise(n = n()) %>% 
+  mutate(frequency = n/sum(n))
+ct_h_adr = ct_h %>% 
+  group_by(ogn, aM) %>% 
+  arrange(ogn, aM) %>% 
+  summarize_at(vars(adr),funs(mean(.,na.rm = TRUE) )) %>% 
+  rename(amr = adr) 
+rst_h_adr = rst_h %>% 
+  group_by(ogn, aM) %>% 
+  arrange(ogn, aM) %>% 
+  summarize_at(vars(adr), funs(mean(., na.rm = TRUE) )) %>% 
+  rename(amr = adr) 
+ct_h_top = ct_h %>% 
+  group_by(ogn) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+ct_h_join = inner_join(ct_h_adr, ct_h_top, by = "ogn")
+rst_h_top = rst_h %>% 
+  group_by(ogn) %>% 
+  summarise(n = n()) %>% 
+  arrange(desc(n))
+rst_h_join = inner_join(rst_h_adr, rst_h_top, by = "ogn")
+ct_h_freq = ct_h_freq %>% 
+  filter(n > 80, frequency < 0.6)
 
+h2 = h %>% 
+  filter(hotel == "City Hotel", is_canceled == 0) %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month,stays_in_week_nights, stays_in_weekend_nights, adr) %>% mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% arrange(arrival_date_year, arrival_date_month, arrival_date_day_of_month)
+
+h2$arrival_date_month = as.integer(factor(h2$arrival_date_month, levels = month.name))
+
+h2 = h2 %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month, length_of_stay, adr) %>% unite("arrival_date", c("arrival_date_year", "arrival_date_month", "arrival_date_day_of_month"), sep = "/") %>% filter(adr != 0.00)
+
+h2$arrival_date <- as.Date(h2$arrival_date)
+h2 = h2 %>% arrange(arrival_date)  %>% group_by(arrival_date) %>% summarise(avg_length_of_stay = mean(length_of_stay), avg_adr = mean(adr))
+
+mod = h2
+start_date = as.Date("2015-07-01")
+mod$arrival_date <- as.numeric(difftime(mod$arrival_date, start_date, unit = "days"))
+NumDays.city <- mod$arrival_date
+xc <- cos(2*pi*NumDays.city/365.25)
+xs <- sin(2*pi*NumDays.city/365.25)  
+fit.lm <- lm(avg_adr ~ xc + xs + mod$arrival_date, data = mod)
+model.func = function(day) {
+  return(
+    fit.lm$coefficients[[1]] + 
+    fit.lm$coefficients[[2]]*cos(2*pi*day/365.25) + 
+    fit.lm$coefficients[[3]]*sin(2*pi*day/365.25) + 
+    fit.lm$coefficients[[4]]*day
+  )
+}
+new = data.frame(arrival_date=793:1577)
+mod = bind_rows(mod,new)
+mod$pred <- model.func(mod$arrival_date)
+mod$residual <- mod$avg_adr-mod$pred
+
+
+resid <- remove_missing(mod,na.rm=TRUE,vars = names(mod))
+resid$r2 <- resid$residual^2
+RMSError <- sqrt(mean(resid$r2))
+mod$RMSUpperBound <- (2*RMSError)+mod$pred
+mod$RMSLowerBound <- mod$pred-(2*RMSError)
+
+ggplot()+
+  geom_errorbar(mapping=aes(x=mod$arrival_date,y=mod$pred,ymax=mod$pred+RMSError,ymin=mod$pred-RMSError),alpha=.05,color="blue")+
+  geom_point(mapping=aes(x=mod$arrival_date,y=mod$avg_adr),size=1,color="red",alpha=.25)+
+  xlab("Arrival Date")+ylab("Average Adr")+theme_classic()+ggtitle("Forecasted Average ADR")+
+  geom_vline(xintercept = 793,linetype=3)+geom_point(mapping=aes(x=mod$arrival_date,y=mod$pred),color="purple",size=.5)+
+  geom_smooth(mapping=aes(x=mod$arrival_date,y=mod$RMSUpperBound),xseq=793:1577,se=FALSE,color="red",linetype=2,alpha=.25)+
+  geom_smooth(mapping=aes(x=mod$arrival_date,y=mod$RMSLowerBound),xseq=793:1577,se=FALSE,color="red",linetype=2,alpha=.25)
+
+ggplot()+theme_classic(
+)+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
+```
 
 ## Question 2: Which model best predicts cancellation?
 
