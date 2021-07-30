@@ -327,20 +327,61 @@ mod$residual <- mod$avg_adr-mod$pred
 resid <- remove_missing(mod,na.rm=TRUE,vars = names(mod))
 resid$r2 <- resid$residual^2
 RMSError <- sqrt(mean(resid$r2))
-mod$RMSUpperBound <- (2*RMSError)+mod$pred
-mod$RMSLowerBound <- mod$pred-(2*RMSError)
+f_density<- function(x){
+  (1+(x/1577))^2
+}
 
 ggplot()+
-  geom_errorbar(mapping=aes(x=mod$arrival_date,y=mod$pred,ymax=mod$pred+RMSError,ymin=mod$pred-RMSError),alpha=.05,color="blue")+
-  geom_point(mapping=aes(x=mod$arrival_date,y=mod$avg_adr),size=1,color="red",alpha=.25)+
-  xlab("Arrival Date")+ylab("Average Adr")+theme_classic()+ggtitle("Forecasted Average ADR")+
-  geom_vline(xintercept = 793,linetype=3)+geom_point(mapping=aes(x=mod$arrival_date,y=mod$pred),color="purple",size=.5)+
-  geom_smooth(mapping=aes(x=mod$arrival_date,y=mod$RMSUpperBound),xseq=793:1577,se=FALSE,color="red",linetype=2,alpha=.25)+
-  geom_smooth(mapping=aes(x=mod$arrival_date,y=mod$RMSLowerBound),xseq=793:1577,se=FALSE,color="red",linetype=2,alpha=.25)
+  geom_errorbar(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred,
+      ymax=mod$pred+(f_density(mod$arrival_date)*RMSError),
+      ymin=mod$pred-(f_density(mod$arrival_date)*RMSError)),
+    alpha=.025,
+    color="red")+
+  geom_point(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$avg_adr),
+    size=1,
+    color="red",
+    alpha=.25)+
+  xlab("Arrival Date")+
+  ylab("Average Adr")+
+  theme_classic()+
+  ggtitle("Forecasted Average ADR")+
+  geom_vline(xintercept = 793,linetype=3)+
+  geom_line(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred),
+    color="purple",
+    size=.5)+
+  geom_smooth(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred+(2*f_density(mod$arrival_date)*RMSError)),
+      xseq=793:1577,
+      se=FALSE,
+      color="gray",
+      alpha=.25,
+      linetype=3
+    )+
+  geom_smooth(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred-(2*f_density(mod$arrival_date)*RMSError)),
+      xseq=793:1577,
+      se=FALSE,
+      color="gray",
+      alpha=.25,
+      linetype=3
+    )
 
-ggplot()+theme_classic(
-)+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
+ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
 ```
+Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMS Error of 13.31. Our second chart, "Accuracy of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
 
 ## Question 2: Which model best predicts cancellation?
 
