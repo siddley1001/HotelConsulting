@@ -75,8 +75,6 @@ k_df = data.frame(
 ```
 
 
-<<<<<<< HEAD
-=======
 Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
 
 

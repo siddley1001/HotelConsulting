@@ -211,6 +211,7 @@ library(lubridate)</code></pre>
 ## 
 ##     cross</code></pre>
 <pre class="r"><code>library(class)
+
 df = read_csv(&quot;hotel_booking.csv&quot;)</code></pre>
 <pre><code>## 
 ## ── Column specification ────────────────────────────────────────────────────────
@@ -250,6 +251,7 @@ df = read_csv(&quot;hotel_booking.csv&quot;)</code></pre>
   z = (vector-mean(vector))/sd(vector)
   return(z)
 }
+
 #divides correct prediction by total predictions
 accuracy = function(x) {
   sum(diag(x)/(sum(rowSums(x))))
@@ -282,14 +284,25 @@ k_df = data.frame(
   sens,
   spec
 )</code></pre>
-<p>% of people that cancelled their hotel booking</p>
-<pre class="r"><code>sum(df$is_canceled)/ count(df)</code></pre>
-<pre><code>##           n
-## 1 0.3704163</code></pre>
-<p>Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)</p>
 </div>
-<div id="next-steps" class="section level1">
-<h1>Next Steps:</h1>
+<div id="head" class="section level1">
+<h1>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</h1>
+<p>Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)</p>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>f4c05e7aaa5482a2a3ba99b8957c5c7d8af73d03 # Next Steps:</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
 <ul>
 <li>Visualize Metrics as K increases for KNN</li>
 </ul>
@@ -342,7 +355,7 @@ print(q1table,
                              frame=&#39;hsides&#39;,
                              border-spacing=5px&quot;)</code></pre>
 <!-- html table generated in R 4.1.0 by xtable 1.8-4 package -->
-<!-- Thu Jul 29 17:01:35 2021 -->
+<!-- Thu Jul 29 20:49:31 2021 -->
 <table align="center" , rules="rows" , width="50%," frame="hsides" , border-spacing="5px">
 <tr> <th> arrival_date </th> <th> avg_adr </th>  </tr>
   <tr> <td align="center">   0 </td> <td align="center"> 96.56 </td> </tr>
@@ -350,6 +363,16 @@ print(q1table,
   <tr> <td align="center">   2 </td> <td align="center"> 74.53 </td> </tr>
   <tr> <td align="center">   3 </td> <td align="center"> 63.78 </td> </tr>
    </table>
+<p>Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)</p>
+</div>
+<div id="next-steps" class="section level1">
+<h1>Next Steps:</h1>
+<ul>
+<li>Visualize Metrics as K increases for KNN</li>
+<li>Calculate F1 score for both Logistic Regression and KNN + Visualize</li>
+<li>Make a RF model w/ accomopanying metrics</li>
+</ul>
+<p>Make sure there aren’t too many NA’s (check)</p>
 </div>
 
 
