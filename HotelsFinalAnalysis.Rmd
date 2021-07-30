@@ -23,16 +23,15 @@ library(lubridate)
 library(pracma)
 library(class)
 
+
 df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
 ```
 
 # Introduction
 
-Our group used a hotel booking dataset from two hotels in Portugal to answer questions relevant to the travel industry. Each row of data contains several different variables, such as hotel type that was booked by the specific customer, country of origin, and reservation status. Firstly, we asked whether we could predict future room rates with confidence. Such a tool would be useful for travel agencies, hotels and customers. Although hotels can provide rates only for a finite number of months, a model that predicts future rates may enable travel agencies to book vacations further into the future. Using such a model, travel agencies would provide more utility to both customers and clients. Customers could have more booking options, while hotels could increase ease of transaction. Hotels could also understand demand earlier, and thus prepare their budget accordingly.
-
-Secondly, we asked which model best predicts cancellation. In our dataset, about one third (0.37) of bookings ended up getting canceled. Hotels that can predict cancellation can modify operations accordingly. For example, when asking if a customer wishes to be put on a waitlist, the booker can inform the customer of how many clients they predict to cancel, and as such whether the hotel thinks the customer will get a room. Alternatively, a hotel could double book a proportion of rooms that are predicted to be canceled, a risk, but perhaps a profitable one. 
-
+Our group used data describing hotel bookings from two hotels in Portugal to answer questions relevant to the travel industry. Firstly, we asked whether we could predict room rates with confidence. Such a tool would be useful for travel agencies, hotels and customers. Although hotels can provide rates only for a finite number of months, a model that predicts future rates may enable travel agencies to book vacations further into the future. Using such a model, travel agencies would provide more utility to both customers and hotels. Customers could have more booking options with greater certainty as to price, while hotels could increase ease of transaction. Hotels could also understand demand patterns earlier, and thus prepare their budget accordingly.
+Secondly, we asked which model best predicts cancellation. In our dataset, about one third (0.37) of bookings ended up getting canceled. Hotels that can predict cancellation can modify operations accordingly. For example, when asking if a customer wishes to be put on a waitlist, the booker can inform them of the likelihood of a cancellation that could give them a room. Alternatively, a hotel could double book a proportion of rooms that are predicted to be canceled - a risk, but perhaps a profitable one. 
 
 # Data
 
@@ -121,7 +120,9 @@ model_data_resort$arrival_date <- as.numeric(
 NumDays.resort <- model_data_resort$arrival_date
 ```
 
-*data goes here*
+The dataset contains 119,319 bookings for two hotels located in Portugal over about 2 years. There are 32 variables included in the data set; our research questions concerned a select few.
+Our first question uses "arrival_date" to predict the variable "avg_adr". Our group combined the given variables arrival_date_year, arrival_date_month, and arrival_date_day_of_month into the variable arrival_date, which records the client's date of arrival in days since the earliest arrival date in the dataset: July 1, 2015. To do so, we converted each arrival date into a Date type, and used a function to obtain days elapsed. We created the variable "avg_adr" using the variable "adr". ADR is defined as the client's total transaction costs divided by their staying days. In creating "avg_adr", we calculated the mean ADR value for one day for each hotel. Doing so facilitated easy observation of the oscillating relationship between avg_adr and arrival_date, which provided the motivation for our first question. 
+Our second question predicts the variable "is_canceled", which has a value of 1 if the booking was canceled, and 0 otherwise. Analysis revealed that certain variables had a statistically significant relationship with is_canceled. The following are the variables we analyzed. "Hotel" describes whether the observation was at the city hotel or the resort hotel. "is_repeated_guest" is a binary variable, valued at 1 if the guest has booked previously. "lead_time" describes the number of days between entrance into the booking system and the customer's arrival. "previous_bookings_not_canceled" describes the number of the client's previous bookings that were not canceled, while "previous_cancellations" describes those that were canceled.
 
 Data table for Q1: 
 
@@ -141,6 +142,7 @@ print(q1table,
                              width=50%,
                              frame='hsides',
                              border-spacing=5px")
+
 ```
 
 # Results
