@@ -34,7 +34,7 @@ Analysis of significant variables:
 library(MASS)
 ```
 
-```{r, results="asis", echo=F}
+```{r, echo=F}
 leadgraph = df %>% 
   group_by(as.logical(is_canceled)) %>%
   summarize(avg_lead_time = mean(lead_time)) %>% 
@@ -69,30 +69,6 @@ ggplot(fullgraph, aes(x=`as.logical(is_canceled)`, y=value)) +
   geom_col() + 
   facet_wrap(~key, scales = "free")
   
-pvals = c()
-
-pvals = c(pvals, t.test(df$lead_time~as.logical(df$is_canceled))$p.value[[1]])
-pvals = c(pvals, t.test(df$previous_cancellations~as.logical(df$is_canceled))$p.value[[1]])
-pvals = c(pvals, t.test(df$previous_bookings_not_canceled~as.logical(df$is_canceled))$p.value[[1]])
-pvals = c(pvals, t.test(df$adr~as.logical(df$is_canceled))$p.value[[1]])
-
-vars = c("Average Lead Time",
-         "Average Previous Cancellations",
-         "Average Previous Bookings Not Canceled",
-         "Average ADR")
-
-pvaltable = data.frame(Variables = vars, "P values" = pvals)
-pvaltable$P.values = as.character(pvaltable$P.values)
-to_print = pvaltable %>% 
-  xtable(align="ccc")
-print(to_print, 
-      "html", 
-      html.table.attributes="align='center',
-                             rules='rows',
-                             width=50%,
-                             frame='hsides',
-                             border-spacing=5px"
-      )
 hotelgraph = df %>%
   group_by(hotel) %>%
   summarize(
@@ -122,6 +98,63 @@ ggplot(fullgraph2, aes(x=value, y=prop_canceled)) +
   geom_col() + 
   facet_wrap(~key, scales="free")
 detach("package:MASS", unload = TRUE)
+```
+
+```{r, results="asis", echo=F}
+pvals = c()
+
+pvals = c(pvals, t.test(df$lead_time~as.logical(df$is_canceled))$p.value[[1]])
+pvals = c(pvals, t.test(df$previous_cancellations~as.logical(df$is_canceled))$p.value[[1]])
+pvals = c(pvals, t.test(df$previous_bookings_not_canceled~as.logical(df$is_canceled))$p.value[[1]])
+pvals = c(pvals, t.test(df$adr~as.logical(df$is_canceled))$p.value[[1]])
+
+
+vars = c("Average Lead Time",
+         "Average Previous Cancellations",
+         "Average Previous Bookings Not Canceled",
+         "Average ADR")
+
+pvaltable = data.frame(Variables = vars, "P values" = pvals)
+pvaltable$P.values = as.character(pvaltable$P.values)
+to_print = pvaltable %>% 
+  xtable(align="ccc")
+print(to_print, 
+      "html", 
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px"
+      )
+
+pvals2 = c(
+  (prop.test(x=hotelgraph$num_canceled, 
+          n=hotelgraph$n,
+          p=NULL,
+          alternative = "two.sided",
+          correct=TRUE))$p.value[[1]],
+  (prop.test(x=repeatgraph$num_canceled, 
+          n=repeatgraph$n,
+          p=NULL,
+          alternative = "two.sided",
+          correct=TRUE))$p.value[[1]]
+)
+
+vars2 = c("Hotel",
+          "Is Repeated Customer?")
+
+pvaltable2 = data.frame(Variable = vars2, "P values" = pvals2)
+pvaltable2$P.values = as.character(pvaltable2$P.values)
+to_print = pvaltable2 %>% 
+  xtable(align="ccc")
+print(to_print, 
+      "html", 
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px"
+      )
 ```
 
 Building logistic, k-NN, and RandomTrees models
