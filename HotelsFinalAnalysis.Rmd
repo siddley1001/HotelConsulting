@@ -29,42 +29,46 @@ k_df = read_csv("k_df.csv")
 
 # Question 2: Which model best predicts cancellation?
 
-## Analysis of significant variables:
+### Analysis of significant variables:
 
-```{r, echo=F}
+To determine which variables we should use in our models, we started by identifying the variables that had a significant relationship with cancellation. Here are graphs showing the significant variables' relationship with cancellation: 
+
+```{r, echo=F, figures-side, fig.show="hold", out.width="50%"}
 leadgraph = df %>% 
   group_by(as.logical(is_canceled)) %>%
   summarize(avg_lead_time = mean(lead_time)) %>% 
   ungroup() %>%
   rename(value=avg_lead_time)
-leadgraph$key=rep("Average Lead Time", 2)
+leadgraph$key=rep("Lead Time", 2)
 
 prevgraph = df %>%
   group_by(as.logical(is_canceled)) %>%
   summarize(avg_prev_canc = mean(previous_cancellations)) %>% 
   ungroup() %>%
   rename(value=avg_prev_canc)
-prevgraph$key=rep("Average Previous Cancellations", 2)
+prevgraph$key=rep("Previous Cancellations", 2)
 
 prevuncancgraph = df %>%
   group_by(as.logical(is_canceled)) %>%
   summarize(avg_prev_uncanc = mean(previous_bookings_not_canceled)) %>% 
   ungroup() %>%
   rename(value=avg_prev_uncanc)
-prevuncancgraph$key=rep("Average Previous Bookings Not Canceled", 2)
+prevuncancgraph$key=rep("Previous Bookings Not Canceled", 2)
 
 adrgraph = df %>%
   group_by(as.logical(is_canceled)) %>%
   summarize(avg_adr = mean(adr)) %>% 
   ungroup() %>%
   rename(value=avg_adr)
-adrgraph$key=rep("Average ADR", 2)
+adrgraph$key=rep("ADR", 2)
 
 fullgraph = bind_rows(leadgraph, prevgraph, prevuncancgraph, adrgraph)
 
 ggplot(fullgraph, aes(x=`as.logical(is_canceled)`, y=value)) + 
   geom_col(fill="slateblue") + 
-  facet_wrap(~key, scales = "free")
+  facet_wrap(~key, scales = "free") + 
+  xlab("Is Canceled?") + 
+  ylab("Mean Value")
   
 hotelgraph = df %>%
   group_by(hotel) %>%
@@ -93,10 +97,12 @@ fullgraph2 = bind_rows(hotelgraph, repeatgraph)
 
 ggplot(fullgraph2, aes(x=value, y=prop_canceled)) + 
   geom_col(fill="slateblue") + 
-  facet_wrap(~key, scales="free")
+  facet_wrap(~key, scales="free") + 
+  xlab("Value") + 
+  ylab("Proportion Canceled")
 ```
 
-Below are the p-values for the above relationships. The P values for the first 4 variables were calculated using a T-test. The P values for the last 2 were calculated using a two proportion Z-test.
+Below are the P values for the above relationships. The P values for the first 4 variables were calculated using a T-test. The P values for the last 2 were calculated using a two proportion Z-test.
 
 ```{r, results="asis", echo=F}
 pvals = c()
@@ -141,17 +147,9 @@ print(to_print,
       )
 ```
 
-# Building models: 
+### Model Selection: 
 
-Model 1: logistic
-
-Model 2: step-wise logistic
-
-Model 3: logistic with two-fold interaction
-
-Model 4: k-NN, with k=5
-
-**Need to add RandomTrees models**
+Using the significant variables, we created multiple predictive models: logistic, step-wise logistic, logistic with two-fold interaction, k-NN, and RandomForest. 
 
 ```{r, include=F}
 #Data cleaning
@@ -192,7 +190,7 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc1 = ifelse(predicted_canc1 > 0.5,1,0))
 ```
 
-The logistic models performed the same in terms of accuracy, sensitivity, and specificity. Here is a table of coefficients for the simple logistic model:
+To provide an example of one of our models, here is a table of coefficients for the simple logistic model:
 
 ```{r, results="asis", echo=F}
 log_table = tidy(model1)[,c("term", "estimate", "p.value")] %>%
@@ -239,8 +237,8 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc3 = ifelse(predicted_canc3 > 0.5,1,0))
 ```
 
-```{r, include=F}
-#Model4: k-NN, k=5
+```{r, eval=F, include=F}
+#Model4: k-NN, k=11
 
 #standardize dataset
 standardize = function(vector) {
@@ -277,7 +275,7 @@ df_knn = df_test %>%
       levels=c(0,1),
       labels=c("0","1")
     ),
-    k=5)
+    k=11)
   ) %>%
   dplyr::select(predicted_canc4)
 
@@ -285,7 +283,39 @@ df_test = bind_cols(df_test, df_knn) %>%
   mutate(predicted_canc4 = as.integer(predicted_canc4)-1)
 ```
 
-Metrics:
+**Choosing k for k-NN**
+
+To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis.
+
+```{r, echo=F}
+k_df_plot = k_df %>% 
+  rename(
+    "Accuracy"="acc",
+    "Sensitivity"="sens",
+    "Specificity"="spec"
+  ) %>%
+  gather(
+    "Accuracy":"Specificity", 
+    key="Metric", 
+    value="Value"
+    )
+ggplot(k_df_plot) + 
+  geom_line(aes(x=k, y=Value, color=Metric)) + 
+  ggtitle("Performance of k-NN model by k value") + 
+  geom_vline(xintercept=11, color="black", size=0.5)
+```
+
+### Model Performance
+
+The logistic models performed the same in terms of accuracy, sensitivity, and specificity, so we consider only the simple logistic model here. Our models are:
+
+**Model 1:** Logistic
+
+**Model 2:** k-NN, with k=11
+
+**Model 3:** RandomForest, with ntree=**fill in this blank**
+
+Below are metrics of our models' performance. 
 
 ```{r, results="asis", echo=F}
 #input df_test$predicted_canc1, or 2, etc.
@@ -313,9 +343,7 @@ accuracy = function(predicted_canc) {
 metrics_table = tribble(
   ~Model, ~Sensitivity, ~Specificity, ~Accuracy,
   1, sensitivity(df_test$predicted_canc1), specificity(df_test$predicted_canc1), accuracy(df_test$predicted_canc1),
-  2, sensitivity(df_test$predicted_canc2), specificity(df_test$predicted_canc2), accuracy(df_test$predicted_canc2),
-  3, sensitivity(df_test$predicted_canc3), specificity(df_test$predicted_canc3), accuracy(df_test$predicted_canc3),
-  4, sensitivity(df_test$predicted_canc4), specificity(df_test$predicted_canc4), accuracy(df_test$predicted_canc4)
+  2, k_df$sens[[11]], k_df$spec[[11]], k_df$acc[[11]]
 ) %>% mutate(Model=as.integer(Model))
 
 to_print1 = metrics_table %>% 
@@ -330,12 +358,12 @@ print(to_print1,
                              border-spacing=5px"
 )
 ```
+
 ```{r, include=F}
 detach("package:MASS", unload = TRUE)
 ```
 
-Formulas
-```{r}
+```{r, include=F}
 standardize = function(vector) {
   z = (vector-mean(vector))/sd(vector)
   return(z)
@@ -347,9 +375,8 @@ accuracy = function(x) {
 }
 ```
 
-
-Created file, so no longer need to run this code. Storing it here with eval=F.
-```{r, eval=F}
+```{r, eval=F, include=F}
+#Created k_df file, so we no longer need to run this code. Storing it here with eval=F.
 set.seed(216)
 ran = sample(1:nrow(df), 0.8 * nrow(df))
 df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
@@ -379,13 +406,10 @@ k_df = data.frame(
 )
 ```
 
-
-Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
-
 # Next Steps:
 
 - Visualize Metrics as K increases for KNN
-```{r}
+```{r, echo=F}
 k_df_plot = k_df %>% 
   rename(
     "Accuracy"="acc",
