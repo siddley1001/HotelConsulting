@@ -29,6 +29,99 @@ k_df = read_csv("k_df.csv")
 
 # Question 2: Predicting  Cancellation w/ KNN
 
+Analysis of significant variables:
+```{r}
+library(MASS)
+leadgraph = df %>% 
+  group_by(as.logical(is_canceled)) %>%
+  summarize(avg_lead_time = mean(lead_time)) %>% 
+  ungroup() %>%
+  rename(value=avg_lead_time)
+leadgraph$key=rep("Average Lead Time", 2)
+
+prevgraph = df %>%
+  group_by(as.logical(is_canceled)) %>%
+  summarize(avg_prev_canc = mean(previous_cancellations)) %>% 
+  ungroup() %>%
+  rename(value=avg_prev_canc)
+prevgraph$key=rep("Average Previous Cancellations", 2)
+
+prevuncancgraph = df %>%
+  group_by(as.logical(is_canceled)) %>%
+  summarize(avg_prev_uncanc = mean(previous_bookings_not_canceled)) %>% 
+  ungroup() %>%
+  rename(value=avg_prev_uncanc)
+prevuncancgraph$key=rep("Average Previous Bookings Not Canceled", 2)
+
+adrgraph = df %>%
+  group_by(as.logical(is_canceled)) %>%
+  summarize(avg_adr = mean(adr)) %>% 
+  ungroup() %>%
+  rename(value=avg_adr)
+adrgraph$key=rep("Average ADR", 2)
+
+fullgraph = bind_rows(leadgraph, prevgraph, prevuncancgraph, adrgraph)
+
+ggplot(fullgraph, aes(x=`as.logical(is_canceled)`, y=value)) + 
+  geom_col() + 
+  facet_wrap(~key, scales = "free")
+  
+pvals = c()
+
+pvals = c(pvals, t.test(df$lead_time~as.logical(df$is_canceled))$p.value[[1]])
+pvals = c(pvals, t.test(df$previous_cancellations~as.logical(df$is_canceled))$p.value[[1]])
+pvals = c(pvals, t.test(df$previous_bookings_not_canceled~as.logical(df$is_canceled))$p.value[[1]])
+pvals = c(pvals, t.test(df$adr~as.logical(df$is_canceled))$p.value[[1]])
+
+vars = c("Average Lead Time",
+         "Average Previous Cancellations",
+         "Average Previous Bookings Not Canceled",
+         "Average ADR")
+
+pvaltable = data.frame(Variables = vars, "P values" = pvals)
+pvaltable$P.values = as.character(pvaltable$P.values)
+to_print = pvaltable %>% 
+  xtable(align="ccc")
+print(to_print, 
+      "html", 
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px"
+      )
+hotelgraph = df %>%
+  group_by(hotel) %>%
+  summarize(
+    n=n(),
+    num_canceled = sum(is_canceled),
+    prop_canceled = mean(is_canceled)
+  ) %>%
+  ungroup() %>%
+  rename(value=hotel)
+hotelgraph$key=rep("Hotel", 2)
+
+repeatgraph = df %>%
+  group_by(as.logical(is_repeated_guest)) %>%
+  summarize(
+    n=n(),
+    num_canceled = sum(is_canceled),
+    prop_canceled = mean(is_canceled)
+  ) %>%
+  ungroup() %>%
+  rename(value=`as.logical(is_repeated_guest)`)
+repeatgraph$key=rep("Is Repeated Guest?", 2)
+repeatgraph$value=as.character(repeatgraph$value)
+
+fullgraph2 = bind_rows(hotelgraph, repeatgraph)
+
+ggplot(fullgraph2, aes(x=value, y=prop_canceled)) + 
+  geom_col() + 
+  facet_wrap(~key, scales="free")
+detach("package:MASS", unload = TRUE)
+```
+
+
 Formulas
 ```{r}
 standardize = function(vector) {
