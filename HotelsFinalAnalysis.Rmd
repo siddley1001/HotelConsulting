@@ -76,8 +76,6 @@ k_df = data.frame(
 sum(df$is_canceled)/ count(df)
 ```
 
-Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
-
 # Next Steps:
 
 - Visualize Metrics as K increases for KNN
