@@ -27,7 +27,163 @@ df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
 ```
 
-# Question 2: Which model best predicts cancellation?
+# Introduction
+
+Our group used a hotel booking dataset from two hotels in Portugal to answer questions relevant to the travel industry. Each row of data contains several different variables, such as hotel type that was booked by the specific customer, country of origin, and reservation status. Firstly, we asked whether we could predict future room rates with confidence. Such a tool would be useful for travel agencies, hotels and customers. Although hotels can provide rates only for a finite number of months, a model that predicts future rates may enable travel agencies to book vacations further into the future. Using such a model, travel agencies would provide more utility to both customers and clients. Customers could have more booking options, while hotels could increase ease of transaction. Hotels could also understand demand earlier, and thus prepare their budget accordingly.
+
+Secondly, we asked which model best predicts cancellation. In our dataset, about one third (0.37) of bookings ended up getting canceled. Hotels that can predict cancellation can modify operations accordingly. For example, when asking if a customer wishes to be put on a waitlist, the booker can inform the customer of how many clients they predict to cancel, and as such whether the hotel thinks the customer will get a room. Alternatively, a hotel could double book a proportion of rooms that are predicted to be canceled, a risk, but perhaps a profitable one. 
+
+
+# Data
+
+```{r, include=F}
+#data cleaning
+cleaned1 = df %>% 
+  filter(is_canceled == 0) %>% 
+  dplyr::select(
+    hotel,
+    arrival_date_year, 
+    arrival_date_month, 
+    arrival_date_day_of_month,
+    stays_in_week_nights, 
+    stays_in_weekend_nights, 
+    adr) %>% 
+  mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% 
+  arrange(
+    arrival_date_year, 
+    arrival_date_month, 
+    arrival_date_day_of_month) %>%
+  dplyr::select(
+    arrival_date_year, 
+    arrival_date_month, 
+    arrival_date_day_of_month, 
+    length_of_stay, 
+    adr, 
+    hotel) 
+cleaned1$arrival_date_month = as.integer(
+  factor(cleaned1$arrival_date_month, 
+         levels = month.name))
+cleaned1 = cleaned1 %>%
+  unite("arrival_date", 
+        c("arrival_date_year", 
+          "arrival_date_month", 
+          "arrival_date_day_of_month"), 
+        sep = "/") %>% 
+  filter(adr != 0.00)
+
+city_hotels2 = cleaned1 %>% 
+  filter(hotel == "City Hotel")
+resort_hotels2 = cleaned1 %>%
+  filter(hotel == "Resort Hotel")
+
+city_hotels2 = city_hotels2 %>% 
+  dplyr::select(
+    arrival_date_year, 
+    arrival_date_month, 
+    arrival_date_day_of_month, 
+    length_of_stay, 
+    adr) %>% 
+  unite("arrival_date", 
+        c("arrival_date_year", 
+          "arrival_date_month", 
+          "arrival_date_day_of_month"), 
+        sep = "/") %>% 
+  filter(adr != 0.00)
+
+city_hotels2$arrival_date <- as.Date(city_hotels2$arrival_date)
+city_hotels2 = city_hotels2 %>% 
+  arrange(arrival_date) %>% 
+  group_by(arrival_date) %>% 
+  summarise(
+    avg_adr = mean(adr)
+    )
+resort_hotels2$arrival_date <- as.Date(resort_hotels2$arrival_date)
+resort_hotels2 = resort_hotels2 %>% 
+  arrange(arrival_date) %>% 
+  group_by(arrival_date) %>% 
+  summarise(
+    avg_adr = mean(adr)
+    )
+
+model_data_city = city_hotels2
+start_date = as.Date("2015-07-01")
+model_data_city$arrival_date <- as.numeric(
+  difftime(model_data_city$arrival_date, 
+           start_date, 
+           unit = "days"))
+NumDays.city <- model_data_city$arrival_date
+
+model_data_resort = resort_hotels2
+model_data_resort$arrival_date <- as.numeric(
+  difftime(model_data_resort$arrival_date, 
+           start_date, 
+           unit = "days"))
+NumDays.resort <- model_data_resort$arrival_date
+```
+
+*data goes here*
+
+Data table for Q1: 
+
+```{r, echo=F, results="asis"}
+#Table for Q1
+q1table = model_data_city %>% 
+  head(4) %>%
+  select(-avg_length_of_stay) %>%
+  mutate(arrival_date = as.integer(arrival_date)) %>%
+  xtable(
+    align="ccc", 
+    type="html")
+print(q1table, 
+      "html", 
+      include.rownames=FALSE,
+      html.table.attributes="align='center',
+                             rules='rows',
+                             width=50%,
+                             frame='hsides',
+                             border-spacing=5px")
+```
+
+# Results
+
+## Question 1: Can we predict future room rates with confidence?
+
+```{r, echo=F}
+xc <- cos(2*pi*model_data_city$arrival_date/365.25)
+xs <- sin(2*pi*model_data_city$arrival_date/365.25)
+fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_city)
+model_data_city$pred1 <- predict(fit.lm, model_data_city)
+model.func = function(day){
+  return(
+    fit.lm$coefficients[[1]] + fit.lm$coefficients[[2]]*cos(2*pi*day/365.25) + fit.lm$coefficients[[3]]*sin(2*pi*day/365.25) + fit.lm$coefficients[[4]]*day
+  )
+}
+p1 <- ggplot() + geom_point(data = model_data_city, aes(x = arrival_date, y = avg_adr)) + geom_hline(aes(yintercept=0))
+p1.trend = p1  + 
+  geom_line(data = model_data_city, aes(x = arrival_date, y = pred1), color="red", size = 2)
+new = data.frame(arrival_date=793:1577)
+model_data_city = bind_rows(model_data_city, new)
+model_data_city$pred <- model.func(model_data_city$arrival_date)
+p1.trend + geom_line(data = model_data_city, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
+```
+
+```{r}
+xc <- cos(2*pi*model_data_resort$arrival_date/365.25)
+xs <- sin(2*pi*model_data_resort$arrival_date/365.25)
+fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_resort)
+model_data_resort$pred1 <- predict(fit.lm, model_data_resort)
+p2 <- ggplot() + geom_point(data =model_data_resort, aes(x = arrival_date, y = avg_adr)) + geom_hline(aes(yintercept=0))
+p2.trend = p2  + 
+  geom_line(data = model_data_resort, aes(x = arrival_date, y = pred1), color="red", size = 2)
+new = data.frame(arrival_date=793:1577)
+model_data_resort = bind_rows(model_data_resort, new)
+model_data_resort$pred <- model.func(model_data_resort$arrival_date)
+p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
+```
+
+
+
+## Question 2: Which model best predicts cancellation?
 
 ### Analysis of significant variables:
 
@@ -409,52 +565,7 @@ k_df = data.frame(
 # Next Steps:
 
 -Incorporate RF model into ModelPerformance, and Model selection?
+
 - ?Calculate F1 score for both Logistic Regression and KNN + Visualize
+
 - Make a RF model w/ accomopanying metrics
-
-
-Make sure there aren't too many NA's (check)
-```{r}
-city_hotels2 = df %>% filter(hotel == "City Hotel", is_canceled == 0) %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month,stays_in_week_nights, stays_in_weekend_nights, adr) %>% mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% arrange(arrival_date_year, arrival_date_month, arrival_date_day_of_month)
-
-city_hotels2$arrival_date_month = as.integer(factor(city_hotels2$arrival_date_month, levels = month.name))
-
-city_hotels2 = city_hotels2 %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month, length_of_stay, adr) %>% unite("arrival_date", c("arrival_date_year", "arrival_date_month", "arrival_date_day_of_month"), sep = "/") %>% filter(adr != 0.00)
-
-city_hotels2$arrival_date <- as.Date(city_hotels2$arrival_date)
-city_hotels2 = city_hotels2 %>% arrange(arrival_date)  %>% group_by(arrival_date) %>% summarise(avg_length_of_stay = mean(length_of_stay), avg_adr = mean(adr))
-
-model_data_city = city_hotels2
-start_date = as.Date("2015-07-01")
-model_data_city$arrival_date <- as.numeric(difftime(model_data_city$arrival_date, start_date, unit = "days"))
-NumDays.city <- model_data_city$arrival_date
-```
-
-
-```{r, results="asis"}
-q1table = model_data_city %>% 
-  head(4) %>%
-  select(-avg_length_of_stay) %>%
-  mutate(arrival_date = as.integer(arrival_date)) %>%
-  xtable(
-    align="ccc", 
-    type="html")
-print(q1table, 
-      "html", 
-      include.rownames=FALSE,
-      html.table.attributes="align='center',
-                             rules='rows',
-                             width=50%,
-                             frame='hsides',
-                             border-spacing=5px")
-```
-
-Use cross validation to find accuracy for each k-value on that subset (maybe a range of k from 1 to 100)
-
-# Next Steps:
-
-- Visualize Metrics as K increases for KNN
-- Calculate F1 score for both Logistic Regression and KNN + Visualize
-- Make a RF model w/ accomopanying metrics
-
-Make sure there aren't too many NA's (check)
