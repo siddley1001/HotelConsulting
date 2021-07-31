@@ -662,6 +662,8 @@ rf = randomForest(is_canceled~.,
                   ntree=30)
 predicted = as.integer(predict(rf, newdata=df_test))-1
 conf_mat = table(predicted, df_test$is_canceled)
+df_test = df_test %>%
+  mutate(predicted_canc5 = predicted)
 ```
 
 **Choosing k for k-NN**
@@ -721,7 +723,7 @@ sensitivity = function(predicted_canc) {
 
 specificity = function(predicted_canc) {
   return(
-    sum(!df_test$is_canceled & !predicted_canc) /
+    sum(!df_test$is_canceled & predicted_canc==0) /
       sum(!df_test$is_canceled)
   )
 }
@@ -729,18 +731,19 @@ specificity = function(predicted_canc) {
 accuracy = function(predicted_canc) {
   (
   sum(df_test$is_canceled & predicted_canc) + 
-    sum(!df_test$is_canceled & !predicted_canc)
+    sum(!df_test$is_canceled & predicted_canc==0)
   ) / nrow(df_test)
 }
 
 metrics_table = tribble(
-  ~Model, ~Sensitivity, ~Specificity, ~Accuracy,
-  1, sensitivity(df_test$predicted_canc1), specificity(df_test$predicted_canc1), accuracy(df_test$predicted_canc1),
-  2, k_df$sens[[11]], k_df$spec[[11]], k_df$acc[[11]]
+  ~Model, ~Sensitivity, ~Specificity, ~Accuracy, ~Spec_Times_Accuracy,
+  1, sensitivity(df_test$predicted_canc1), specificity(df_test$predicted_canc1), accuracy(df_test$predicted_canc1), specificity(df_test$predicted_canc1)*accuracy(df_test$predicted_canc1),
+  2, k_df$sens[[11]], k_df$spec[[11]], k_df$acc[[11]], k_df$spec[[11]]*k_df$acc[[11]],
+  3, 0.25, 0.99, 0.72, 0.71
 ) %>% mutate(Model=as.integer(Model))
 
 to_print1 = metrics_table %>% 
-  xtable(align="ccccc")
+  xtable(align="cccccc")
 print(to_print1, 
       "html", 
       include.rownames=F,
@@ -755,53 +758,3 @@ print(to_print1,
 ```{r, include=F}
 detach("package:MASS", unload = TRUE)
 ```
-
-```{r, include=F}
-standardize = function(vector) {
-  z = (vector-mean(vector))/sd(vector)
-  return(z)
-}
-
-#divides correct prediction by total predictions
-accuracy = function(x) {
-  sum(diag(x)/(sum(rowSums(x))))
-}
-```
-
-```{r, eval=F, include=F}
-#Created k_df file, so we no longer need to run this code. Storing it here with eval=F.
-ran = sample(1:nrow(df), 0.8 * nrow(df))
-df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
-df_norm = as.data.frame(lapply(df_hotel_binary[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr", "hotel")], standardize)) 
-#subset = df[sample(x=nrow(df), size=10000), ]
-df_train = df_norm[ran, ] #%>% cbind(., )
-df_test = df_norm[-ran, ]
-df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
-df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
-acc = vector("double", 100)
-sens = vector("double", 100)
-spec = vector("double", 100)
-options(width = 80)
-for (k in 1:100){
-  knn_output = knn(df_train, df_test, cl=df_target_category, k=k)
-  confusion_matrix = table(knn_output, df_test_category)
-  acc[[k]]= accuracy(confusion_matrix)
-  sens[[k]]= confusion_matrix[2,2] / sum(confusion_matrix[,2])
-  spec[[k]]= confusion_matrix[1,1] / sum(confusion_matrix[,1])
-}
-k = as.integer(1:100)
-k_df = data.frame(
-  k,
-  acc,
-  sens,
-  spec
-)
-```
-
-# Next Steps:
-
--Incorporate RF model into ModelPerformance, and Model selection?
-
-- ?Calculate F1 score for both Logistic Regression and KNN + Visualize
-
-- Make a RF model w/ accomopanying metrics
