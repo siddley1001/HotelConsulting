@@ -196,6 +196,11 @@ print(q2table,
 
 ## Question 1: Can we predict future room rates with confidence?
 
+To answer our first question, which predicts the average daily rate for both the city and the resort hotels for dates not in the dataset, we first built a model on the data that we had in the data set. We noticed that the data trended in an oscillation - the average daily rate per day increased during summer months and decreased during winter months. These peaks and troughs resembled a sinusoidal graph, so we decided to model the data sinusoidally. The data also had a linear component to it as well. From 2015 to 2017, the peaks and troughs also gradually increased, indicating that the hotels were getting slightly more expensive per year, and we combined this as part of our sinusoidal function to create the most accurate model. To represent the sinusoidal nature in a line of best fit for this graph, we first converted the days elapsed into sin and cos values, and then used a fitting function on the data to find the coefficients for the trend line used to model the data in the data set. Once we found the coefficients, we were able to predict the prices for future dates not in the data set. To do this, we created a specific model function, which used the coefficients determined from the previous fit to determine the line of best fit for future dates. We then binded two years’ worth of rows to the original data set - all with adr values set to NA. Using the model function described earlier, we were able to predict average daily rates for the next two years by arrival date. As the trend line shows, the next two years follow the sine curve and also show a linear trend upward in price for both the resort and city hotel, though this upward trend is more pronounced in the city hotel.
+
+The city hotel prediction model indicates that average daily rate per day is higher during summer months than winter months, as the difference in price between the peak price (usually in July) and the lowest price (usually in January) within a year is around 60 - 70 units. However, this difference is much starker in resort hotels. The resort hotels follow a similar pattern, where the average daily rate is higher in summer months than in winter months, but the range between the highest and lowest values within the year is 100 - 125 units. The data is unclear on whether price is measured in Euros (currency of Portugal), or US Dollars, so for analysis of the data, “units” would be a more appropriate term for the measurement of money. This larger difference in resort hotel data is also accompanied by a steeper decline, so that indicates that the price remains high for a shorter amount of time than the city hotels. This also contributes to the fact that city hotel data is more rounded and looks like a series of hills, while the resort data looks sharper and looks more like a series of mountains. This could be due to the fact that resort hotels specifically target customers looking to vacation which usually occurs during summer months. However, city hotels could have vacationers, but could also have customers traveling for work-related or other reasons. Either way, the prediction model helps customers to see when prices will be the highest and to look out for periods where the average daily rate will decrease, and it helps hotel management determine when their revenues from hotel rates will be the highest or lowest and help prepare for when they shift from one specific rate pattern to the next.
+
+
 ```{r, echo=F, figures-side, fig.show="hold", out.width="50%"}
 xc <- cos(2*pi*model_data_city$arrival_date/365.25)
 xs <- sin(2*pi*model_data_city$arrival_date/365.25)
@@ -219,7 +224,11 @@ model_data_city$pred <- model.func(model_data_city$arrival_date)
 p1.trend + 
   geom_line(data = model_data_city, 
             aes(x = arrival_date, 
-                y = pred)) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("City Hotel Predictions") + 
+                y = pred)) + 
+  geom_vline(xintercept=365.25/2,color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("City Hotel Predictions") + 
   theme(plot.title = element_text(hjust = 0.5))
 
 #Resort
@@ -237,15 +246,21 @@ model_data_resort$pred <- model.func(model_data_resort$arrival_date)
 #Graph
 p2.trend + 
   geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + 
-  geom_vline(xintercept = 792) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("Resort Hotel Predictions") + 
+  geom_vline(xintercept=365.25/2,color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5) + 
+  xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("Resort Hotel Predictions") + 
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
 The mathematical equation for city hotel data:
-$81.0966 + 14.66199 \cos(2*pi*x/365.25) + 5.60252 \sin(2*pi*x/365.25) + 0.05533655x$.
+
+$$14.66 \cos({2 \pi x \over 365.25}) + 5.60 \sin({2 \pi x \over 365.25}) + 0.0553x + 81.10$$
 
 The mathematical equation for resort hotel data:
-$70.12623 + 46.47132 \cos(2*pi*x/365.25) + 26.28031 \sin(2*pi*x/365.25) + 0.04860842x$
+
+$$46.47 \cos({2 \pi x \over 365.25}) + 26.28 \sin({2 \pi x \over 365.25}) + 0.0486x + 70.13$$
 
 ```{r echo=F, figures-side2, fig.show="hold", out.width="50%", message=FALSE}
 #Walker's
@@ -364,10 +379,10 @@ ggplot()+
     color="red",
     alpha=.25)+
   xlab("Time Elapsed Since 1 July 2015 (days)")+
-  theme(plot.title = element_text(hjust = 0.5))+
   ylab("Average Adr")+
   theme_classic()+
   ggtitle("Forecasted Average ADR")+
+  theme(plot.title = element_text(hjust = 0.5))+
   geom_vline(xintercept = 793,linetype=1,alpha=.05)+
   geom_line(
     mapping=aes(
@@ -404,21 +419,27 @@ ggplot()+
 
 #Graph
 ggplot()+theme_classic()+
-  ggtitle("Accuracy of Predicted Curve")+
+  ggtitle("Residuals of Predicted Curve")+
   theme(plot.title = element_text(hjust = 0.5))+
-  ylab("Average ADR")+
+  ylab("Residuals (Average ADR)")+
   xlab("Arrival Date (Elapsed Time)")+
   geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+
   geom_hline(yintercept = RMSError,linetype=2)
 ```
 
-Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMSE of 13.31. Our second chart, "Accuracy of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
+Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMSE of 13.31. Our second chart, "Residuals of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
 
 ## Question 2: Which model best predicts cancellation?
 
 ### How do significant variables correlate with cancellation?
 
-To determine which variables we should use in our models, we started by identifying the variables that had a significant relationship with cancellation. Here are graphs showing the significant variables' relationship with cancellation: 
+To determine which variables we should use in our models, we started by identifying the variables that had a significant relationship with cancellation. Pictured are graphs showing the significant variables' relationship with cancellation, along with a table of P values. The P values for the first 4 variables were calculated using a T-test. The P values for the last 2 were calculated using a two proportion Z-test.
+
+<center>
+
+##### Relationship between is_canceled and other significant variables
+
+</center>
 
 ```{r, echo=F, figures-side3, fig.show="hold", out.width="50%"}
 leadgraph = df %>% 
@@ -491,8 +512,6 @@ ggplot(fullgraph2, aes(x=value, y=prop_canceled)) +
   ylab("Proportion Canceled")
 ```
 
-Below are the P values for the above relationships. The P values for the first 4 variables were calculated using a T-test. The P values for the last 2 were calculated using a two proportion Z-test.
-
 ```{r, results="asis", echo=F}
 pvals = c()
 
@@ -540,7 +559,7 @@ print(to_print,
 
 ### Model Selection: 
 
-Using the significant variables, we created multiple predictive models: logistic, step-wise logistic, logistic with two-fold interaction, k-NN, and RandomForest. 
+Using the significant variables, we created multiple predictive models: logistic, step-wise logistic, logistic with two-fold interaction, k-NN, and RandomForest. To provide an example of one of our models, Table 4 gives coefficients for the simple logistic model. 
 
 ```{r, include=F}
 #Data cleaning
@@ -580,10 +599,6 @@ df_test = df_test %>% add_predictions(
   var="predicted_canc1") %>%
   mutate(predicted_canc1 = ifelse(predicted_canc1 > 0.5,1,0))
 ```
-
-#### Logistic Regression
-
-To provide an example of one of our models, here is a table of coefficients for the simple logistic model:
 
 ```{r, results="asis", echo=F}
 log_table = tidy(model1)[,c("term", "estimate", "p.value")] %>%
@@ -668,7 +683,6 @@ accuracy = function(predicted_canc) {
 }
 ```
 
-
 ```{r, eval=T, include=F}
 #Model4: k-NN, k=11
 
@@ -719,13 +733,11 @@ df_test = df_test %>%
   mutate(predicted_canc5 = predicted)
 ```
 
-#### K Nearest Neihbors (KNN)
+<br>
 
-**Choosing k for k-NN**
+As for the k-NN and RandomForest models, we needed to determine which k and ntree values we should use. To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis. As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
 
-To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis.
-
-As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
+<br>
 
 ```{r, echo=F, figures-side4, fig.show="hold", out.width="50%"}
 k_df_plot = k_df %>% 
@@ -743,28 +755,19 @@ k_df_plot = k_df %>%
 ggplot(k_df_plot) + 
   geom_line(aes(x=k, y=Value, color=Metric)) + 
   ggtitle("Performance of k-NN model by k value") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
   geom_vline(xintercept=11, color="black", size=0.5)
 
 ggplot(rf_stats %>% rename(Metric=metric)) + 
   geom_line(aes(x=n, y=value, color=Metric)) + 
   geom_vline(xintercept=30, color="black", size=0.5) + 
   ggtitle("Performance of RandomForest Model by ntree Value") + 
+  theme(plot.title = element_text(hjust = 0.5)) +
   xlab("ntree") + 
   ylab("Value")
 ```
 
-
-### Model Performance
-
-The logistic models performed the same in terms of accuracy, sensitivity, and specificity, so we consider only the simple logistic model here. Our models are:
-
-**Model 1:** Logistic
-
-**Model 2:** k-NN, with k=11
-
-**Model 3:** RandomForest, with ntree= 30
-
-Below are metrics of our models' performance. 
+The logistic models performed the same in terms of accuracy, sensitivity, and specificity, so we consider only the simple logistic model here. We compared simple logistic, k-NN with k=11, and RandomForest with ntree=30. Table 5 gives the metrics of our models' performance. 
 
 ```{r, results="asis", echo=F}
 
@@ -776,7 +779,7 @@ metrics_table = tribble(
 ) %>% mutate(Model=as.integer(Model))
 
 to_print1 = metrics_table %>% 
-  xtable(align="cccccc")
+  xtable(align="cccccc", caption = "Table 5: Model Performance Metrics")
 print(to_print1, 
       "html", 
       include.rownames=F,
@@ -791,3 +794,7 @@ print(to_print1,
 ```{r, include=F}
 detach("package:MASS", unload = TRUE)
 ```
+
+# Conclusion
+
+Conlusion goes here.
