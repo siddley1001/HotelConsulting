@@ -129,9 +129,7 @@ model_data_resort$arrival_date <- as.numeric(
 NumDays.resort <- model_data_resort$arrival_date
 ```
 
-The dataset contains 119,319 bookings for two hotels located in Portugal over about 2 years. There are 32 variables included in the data set; our research questions concerned a select few. Our first question uses "arrival_date" to predict the variable "avg_adr". Our group combined the given variables arrival_date_year, arrival_date_month, and arrival_date_day_of_month into the variable arrival_date, which records the client's date of arrival in days since the earliest arrival date in the dataset: July 1, 2015. To do so, we converted each arrival date into a Date type, and used a function to obtain days elapsed. We created the variable "avg_adr" using the variable "adr". ADR is defined as the client's total transaction costs divided by their staying days. In creating "avg_adr", we calculated the mean ADR value for one day for each hotel. Doing so facilitated easy observation of the oscillating relationship between avg_adr and arrival_date, which provided the motivation for our first question. 
-
-Data table for Q1: 
+The dataset contains 119,319 bookings for two hotels located in Portugal over about two years. There are 32 variables included in the data set; our research questions concerned a select few. Our *first question* uses `"arrival_date"` to **predict the variable `"avg_adr"`**. Our group combined the variables `"arrival_date_year"`, `"arrival_date_month"`, and `"arrival_date_day_of_month"` into the variable `"arrival_date"`, to record the client's date of arrival in elapsed days since July 1, 2015 (the earliest arrival date). For modeling, we converted `"arrival_date"` into a Date type, and used a function to obtain days elapsed from 07/01/2015.  We created the variable `"avg_adr"` using the variable `"adr"`. `"adr"` is the client's total transaction costs divided by their staying days. In creating `"avg_adr"`, we calculated the mean ADR value for one day for each hotel. After establishing these variables, one can easily observe the increasing oscillating relationship between `"avg_adr"` and `"arrival_date"`, which motivated our first question. 
 
 ```{r, echo=F, results="asis"}
 #Table for Q1
@@ -140,9 +138,12 @@ q1table = model_data_city %>%
   mutate(arrival_date = as.integer(arrival_date)) %>%
   xtable(
     align=c("c","c","c"),
-    type="html")
+    type="html",
+    caption = "Table 1: Example of Average ADR as arrival_date (time elapased) increases")
 print(q1table, 
       "html", 
+      caption.placement = "top",
+      scalebox = 0.7,
       include.rownames=FALSE,
       html.table.attributes="align='center',
                              rules='rows',
@@ -152,9 +153,7 @@ print(q1table,
 
 ```
 
-Our second question predicts the variable "is_canceled", which has a value of 1 if the booking was canceled, and 0 otherwise. Analysis revealed that certain variables had a statistically significant relationship with is_canceled. The following are the variables we analyzed. "Hotel" describes whether the observation was at the city hotel or the resort hotel. "is_repeated_guest" is a binary variable, valued at 1 if the guest has booked previously. "lead_time" describes the number of days between entrance into the booking system and the customer's arrival. "previous_bookings_not_canceled" describes the number of the client's previous bookings that were not canceled, while "previous_cancellations" describes those that were canceled.
-
-Data Table for Q2:
+Our *second question* **predicts the variable `"is_canceled"`**, which has a value of 1 if the booking was canceled, and 0 otherwise. Analysis revealed that certain variables had a statistically significant relationship with is_canceled. The following are the variables we analyzed. `"hotel"` describes whether the observation was at the city hotel or the resort hotel. `"is_repeated_guest"` is a binary variable, valued at 1 if the guest has booked previously. `"lead_time"` describes the number of days between entrance into the booking system and the customer's arrival. `"previous_bookings_not_canceled"` describes the number of the client's previous bookings that were not canceled, while `"previous_cancellations"` describes those that were canceled.
 
 ```{r, results="asis", echo=F}
 q2table = (df %>% select(
@@ -176,10 +175,13 @@ q2table = (df %>% select(
   ) %>%
   xtable(
     align="cccccccc", 
-    type="html"
+    type="html",
+    caption = "Table 2: Example of relevant variables for predicting cancellation"
     )
 print(q2table,
       "html",
+      caption.placement = "top",
+      scalebox = 0.7,
       include.rownames=FALSE,
       html.table.attributes="align='center',
                              rules='rows',
