@@ -7,6 +7,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(warn=-1)
+
 ```
 
 
@@ -23,6 +25,7 @@ library(class)
 library(lubridate)
 library(pracma)
 library(class)
+library(randomForest)
 
 
 df = read_csv("hotel_booking.csv")
@@ -194,7 +197,7 @@ print(q2table,
 
 ## Question 1: Can we predict future room rates with confidence?
 
-```{r, echo=F, fig.align="center", fig.width=6, fig.height=6, fig.cap="Figure 1:" }
+```{r, echo=F, fig.align="center", fig.width=6, fig.height=6 }
 xc <- cos(2*pi*model_data_city$arrival_date/365.25)
 xs <- sin(2*pi*model_data_city$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_city)
@@ -212,16 +215,18 @@ p1.trend = p1  +
 new = data.frame(arrival_date=793:1577)
 model_data_city = bind_rows(model_data_city, new)
 model_data_city$pred <- model.func(model_data_city$arrival_date)
+
+#Graph
 p1.trend + 
   geom_line(data = model_data_city, 
             aes(x = arrival_date, 
                 y = pred)) + 
   geom_vline(xintercept = 792) + 
-  xlab("Arrival Date") + 
+  xlab("Arrival Date (Elapsed Time)") + 
   ylab("Average ADR")
 ```
 
-```{r, echo=F}
+```{r, echo=F, fig.align="center", fig.width=6, fig.height=6}
 xc <- cos(2*pi*model_data_resort$arrival_date/365.25)
 xs <- sin(2*pi*model_data_resort$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_resort)
@@ -232,10 +237,16 @@ p2.trend = p2  +
 new = data.frame(arrival_date=793:1577)
 model_data_resort = bind_rows(model_data_resort, new)
 model_data_resort$pred <- model.func(model_data_resort$arrival_date)
-p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
+
+#Graph
+p2.trend + 
+  geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + 
+  geom_vline(xintercept = 792)  + 
+  xlab("Arrival Date (Elapsed Time)") + 
+  ylab("Average ADR")
 ```
 
-```{r, echo=F, message=F}
+```{r, echo=F, message=F, fig.align="center", fig.width=6, fig.height=6}
 #Walker's
 h <- read.csv("hotel_booking.csv")
 h2 = h %>% 
@@ -334,6 +345,7 @@ f_density<- function(x){
   (1+(x/1577))^2
 }
 
+#Graph
 ggplot()+
   geom_errorbar(
     mapping=aes(
@@ -387,13 +399,21 @@ ggplot()+
   geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
   geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
   geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5)
-ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
+
+#Graph
+ggplot()+theme_classic()+
+  ggtitle("Accuracy of Predicted Curve")+
+  ylab("Average ADR")+
+  xlab("Arrival Date (Elapsed Time)")+
+  geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+
+  geom_hline(yintercept = RMSError,linetype=2)
 ```
-Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMS Error of 13.31. Our second chart, "Accuracy of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
+
+Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMSE of 13.31. Our second chart, "Accuracy of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
 
 ## Question 2: Which model best predicts cancellation?
 
-### Analysis of significant variables:
+### How do significant variables correlate with cancellation?
 
 To determine which variables we should use in our models, we started by identifying the variables that had a significant relationship with cancellation. Here are graphs showing the significant variables' relationship with cancellation: 
 
@@ -428,6 +448,7 @@ adrgraph$key=rep("ADR", 2)
 
 fullgraph = bind_rows(leadgraph, prevgraph, prevuncancgraph, adrgraph)
 
+#Graph
 ggplot(fullgraph, aes(x=`as.logical(is_canceled)`, y=value)) + 
   geom_col(fill="slateblue") + 
   facet_wrap(~key, scales = "free") + 
@@ -459,6 +480,7 @@ repeatgraph$value=as.character(repeatgraph$value)
 
 fullgraph2 = bind_rows(hotelgraph, repeatgraph)
 
+#Graph
 ggplot(fullgraph2, aes(x=value, y=prop_canceled)) + 
   geom_col(fill="slateblue") + 
   facet_wrap(~key, scales="free") + 
@@ -499,9 +521,11 @@ vars = c("Average Lead Time",
 pvaltable = data.frame(Variables = vars, "P values" = pvals)
 pvaltable$P.values = as.character(pvaltable$P.values)
 to_print = pvaltable %>% 
-  xtable(align="ccc")
+  xtable(align="ccc", caption = "Table 3: P Values from 2-proportion Z Test")
 print(to_print, 
       "html", 
+      caption.placement = "top",
+      scalebox = 0.7,
       include.rownames=F,
       html.table.attributes="align='center',
                              rules='rows',
@@ -554,6 +578,8 @@ df_test = df_test %>% add_predictions(
   mutate(predicted_canc1 = ifelse(predicted_canc1 > 0.5,1,0))
 ```
 
+#### Logistic Regression
+
 To provide an example of one of our models, here is a table of coefficients for the simple logistic model:
 
 ```{r, results="asis", echo=F}
@@ -565,9 +591,11 @@ log_table = tidy(model1)[,c("term", "estimate", "p.value")] %>%
          P.value=formatC(P.value, format="e", digits = 3))
 
 to_print_log_mod = log_table %>% 
-  xtable(align="cccc")
+  xtable(align="cccc", caption = "Table 4: Coefficients of Simple Logistic Model")
 print(to_print_log_mod, 
       "html", 
+      caption.placement = "top",
+      scalebox = 0.7,
       include.rownames=F,
       html.table.attributes="align='center',
                              rules='rows',
@@ -610,8 +638,30 @@ standardize = function(vector) {
 }
 
 #Sid's accuracy fxn
-accuracy = function(x) {
-  sum(diag(x)/(sum(rowSums(x)))) * 100
+#accuracy = function(x) {
+#  sum(diag(x)/(sum(rowSums(x)))) * 100
+#}
+
+#input df_test$predicted_canc1, or 2, etc.
+sensitivity = function(predicted_canc) {
+  return(
+    sum(df_test$is_canceled & predicted_canc) /
+      sum(df_test$is_canceled)
+  )
+}
+
+specificity = function(predicted_canc) {
+  return(
+    sum(!df_test$is_canceled & predicted_canc==0) /
+      sum(!df_test$is_canceled)
+  )
+}
+
+accuracy = function(predicted_canc) {
+  (
+  sum(df_test$is_canceled & predicted_canc) + 
+    sum(!df_test$is_canceled & predicted_canc==0)
+  ) / nrow(df_test)
 }
 ```
 
@@ -656,9 +706,7 @@ df_test = bind_cols(df_test, df_knn) %>%
 ```
 
 ```{r, eval=T, echo=F}
-library(randomForest)
 #RandomForest
-
 rf = randomForest(is_canceled~.,
                   data = df_train,
                   ntree=30)
@@ -668,11 +716,13 @@ df_test = df_test %>%
   mutate(predicted_canc5 = predicted)
 ```
 
+#### K Nearest Neihbors (KNN)
+
 **Choosing k for k-NN**
 
 To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis.
 
-```{r, echo=F}
+```{r, echo=F, fig.width=6, fig.height=6}
 k_df_plot = k_df %>% 
   rename(
     "Accuracy"="acc",
@@ -689,6 +739,8 @@ ggplot(k_df_plot) +
   ggtitle("Performance of k-NN model by k value") + 
   geom_vline(xintercept=11, color="black", size=0.5)
 ```
+
+#### Random Forest
 
 As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
 
@@ -710,32 +762,11 @@ The logistic models performed the same in terms of accuracy, sensitivity, and sp
 
 **Model 2:** k-NN, with k=11
 
-**Model 3:** RandomForest, with ntree=**fill in this blank**
+**Model 3:** RandomForest, with ntree= 30
 
 Below are metrics of our models' performance. 
 
 ```{r, results="asis", echo=F}
-#input df_test$predicted_canc1, or 2, etc.
-sensitivity = function(predicted_canc) {
-  return(
-    sum(df_test$is_canceled & predicted_canc) /
-      sum(df_test$is_canceled)
-  )
-}
-
-specificity = function(predicted_canc) {
-  return(
-    sum(!df_test$is_canceled & predicted_canc==0) /
-      sum(!df_test$is_canceled)
-  )
-}
-
-accuracy = function(predicted_canc) {
-  (
-  sum(df_test$is_canceled & predicted_canc) + 
-    sum(!df_test$is_canceled & predicted_canc==0)
-  ) / nrow(df_test)
-}
 
 metrics_table = tribble(
   ~Model, ~Sensitivity, ~Specificity, ~Accuracy, ~Spec_Times_Accuracy,
