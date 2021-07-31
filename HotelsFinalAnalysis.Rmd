@@ -27,6 +27,7 @@ library(class)
 
 df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
+rf_stats = read_csv("rf_stats.csv")
 ```
 
 <center>
@@ -327,20 +328,66 @@ mod$residual <- mod$avg_adr-mod$pred
 resid <- remove_missing(mod,na.rm=TRUE,vars = names(mod))
 resid$r2 <- resid$residual^2
 RMSError <- sqrt(mean(resid$r2))
-mod$RMSUpperBound <- (2*RMSError)+mod$pred
-mod$RMSLowerBound <- mod$pred-(2*RMSError)
+f_density<- function(x){
+  (1+(x/1577))^2
+}
 
 ggplot()+
-  geom_errorbar(mapping=aes(x=mod$arrival_date,y=mod$pred,ymax=mod$pred+RMSError,ymin=mod$pred-RMSError),alpha=.05,color="blue")+
-  geom_point(mapping=aes(x=mod$arrival_date,y=mod$avg_adr),size=1,color="red",alpha=.25)+
-  xlab("Arrival Date")+ylab("Average Adr")+theme_classic()+ggtitle("Forecasted Average ADR")+
-  geom_vline(xintercept = 793,linetype=3)+geom_point(mapping=aes(x=mod$arrival_date,y=mod$pred),color="purple",size=.5)+
-  geom_smooth(mapping=aes(x=mod$arrival_date,y=mod$RMSUpperBound),xseq=793:1577,se=FALSE,color="red",linetype=2,alpha=.25)+
-  geom_smooth(mapping=aes(x=mod$arrival_date,y=mod$RMSLowerBound),xseq=793:1577,se=FALSE,color="red",linetype=2,alpha=.25)
-
-ggplot()+theme_classic(
-)+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
+  geom_errorbar(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred,
+      ymax=mod$pred+(f_density(mod$arrival_date)*RMSError),
+      ymin=mod$pred-(f_density(mod$arrival_date)*RMSError)),
+    alpha=.025,
+    color="red")+
+  geom_point(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$avg_adr),
+    size=1,
+    color="red",
+    alpha=.25)+
+  xlab("Time Elapsed Since 1 July 2015 (days)")+
+  ylab("Average Adr")+
+  theme_classic()+
+  ggtitle("Forecasted Average ADR")+
+  geom_vline(xintercept = 793,linetype=1,alpha=.05)+
+  geom_line(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred),
+    color="purple",
+    size=.5)+
+  geom_smooth(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred+(2*f_density(mod$arrival_date)*RMSError)),
+      xseq=793:1577,
+      se=FALSE,
+      color="red",
+      alpha=.25,
+      linetype=1,
+      size=.5
+    )+
+  geom_smooth(
+    mapping=aes(
+      x=mod$arrival_date,
+      y=mod$pred-(2*f_density(mod$arrival_date)*RMSError)),
+      xseq=793:1577,
+      se=FALSE,
+      color="red",
+      alpha=.25,
+      linetype=1,
+    size=.5
+    )+
+  geom_vline(xintercept=365.25/2,color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5)
+ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
 ```
+Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMS Error of 13.31. Our second chart, "Accuracy of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
 
 ## Question 2: Which model best predicts cancellation?
 
@@ -606,26 +653,17 @@ df_test = bind_cols(df_test, df_knn) %>%
   mutate(predicted_canc4 = as.integer(predicted_canc4)-1)
 ```
 
-```{r, eval=F, echo=F}
+```{r, eval=T, echo=F}
 library(randomForest)
 #RandomForest
-set.seed(216)
-ran = sample(1:nrow(df), 0.8 * nrow(df))
 
-df_hotel_binary = df %>% 
-  mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
-df_norm = as.data.frame(lapply(df_hotel_binary[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr", "hotel")], standardize)) 
-
-#subset = df[sample(x=nrow(df), size=10000), ]
-
-#df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
-#df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
-df_train$is_canceled = df_train$is_canceled %>% as.factor()
-
-rf = randomForest(is_canceled~ previous_cancellations+previous_bookings_not_canceled+lead_time+adr+hotel,
+rf = randomForest(is_canceled~.,
                   data = df_train,
-                  ntree=100)
-print(rf)
+                  ntree=30)
+predicted = as.integer(predict(rf, newdata=df_test))-1
+conf_mat = table(predicted, df_test$is_canceled)
+df_test = df_test %>%
+  mutate(predicted_canc5 = predicted)
 ```
 
 **Choosing k for k-NN**
@@ -650,6 +688,18 @@ ggplot(k_df_plot) +
   geom_vline(xintercept=11, color="black", size=0.5)
 ```
 
+As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
+
+```{r, echo=F}
+ggplot(rf_stats %>% rename(Metric=metric)) + 
+  geom_line(aes(x=n, y=value, color=Metric)) + 
+  geom_vline(xintercept=30, color="black", size=0.5) + 
+  ggtitle("Performance of RandomForest Model by ntree Value") + 
+  xlab("ntree") + 
+  ylab("Value")
+```
+
+
 ### Model Performance
 
 The logistic models performed the same in terms of accuracy, sensitivity, and specificity, so we consider only the simple logistic model here. Our models are:
@@ -673,7 +723,7 @@ sensitivity = function(predicted_canc) {
 
 specificity = function(predicted_canc) {
   return(
-    sum(!df_test$is_canceled & !predicted_canc) /
+    sum(!df_test$is_canceled & predicted_canc==0) /
       sum(!df_test$is_canceled)
   )
 }
@@ -681,18 +731,19 @@ specificity = function(predicted_canc) {
 accuracy = function(predicted_canc) {
   (
   sum(df_test$is_canceled & predicted_canc) + 
-    sum(!df_test$is_canceled & !predicted_canc)
+    sum(!df_test$is_canceled & predicted_canc==0)
   ) / nrow(df_test)
 }
 
 metrics_table = tribble(
-  ~Model, ~Sensitivity, ~Specificity, ~Accuracy,
-  1, sensitivity(df_test$predicted_canc1), specificity(df_test$predicted_canc1), accuracy(df_test$predicted_canc1),
-  2, k_df$sens[[11]], k_df$spec[[11]], k_df$acc[[11]]
+  ~Model, ~Sensitivity, ~Specificity, ~Accuracy, ~Spec_Times_Accuracy,
+  1, sensitivity(df_test$predicted_canc1), specificity(df_test$predicted_canc1), accuracy(df_test$predicted_canc1), specificity(df_test$predicted_canc1)*accuracy(df_test$predicted_canc1),
+  2, k_df$sens[[11]], k_df$spec[[11]], k_df$acc[[11]], k_df$spec[[11]]*k_df$acc[[11]],
+  3, 0.25, 0.99, 0.72, 0.71
 ) %>% mutate(Model=as.integer(Model))
 
 to_print1 = metrics_table %>% 
-  xtable(align="ccccc")
+  xtable(align="cccccc")
 print(to_print1, 
       "html", 
       include.rownames=F,
@@ -707,54 +758,3 @@ print(to_print1,
 ```{r, include=F}
 detach("package:MASS", unload = TRUE)
 ```
-
-```{r, include=F}
-standardize = function(vector) {
-  z = (vector-mean(vector))/sd(vector)
-  return(z)
-}
-
-#divides correct prediction by total predictions
-accuracy = function(x) {
-  sum(diag(x)/(sum(rowSums(x))))
-}
-```
-
-```{r, eval=F, include=F}
-#Created k_df file, so we no longer need to run this code. Storing it here with eval=F.
-set.seed(216)
-ran = sample(1:nrow(df), 0.8 * nrow(df))
-df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
-df_norm = as.data.frame(lapply(df_hotel_binary[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr", "hotel")], standardize)) 
-#subset = df[sample(x=nrow(df), size=10000), ]
-df_train = df_norm[ran, ] #%>% cbind(., )
-df_test = df_norm[-ran, ]
-df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
-df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
-acc = vector("double", 100)
-sens = vector("double", 100)
-spec = vector("double", 100)
-options(width = 80)
-for (k in 1:100){
-  knn_output = knn(df_train, df_test, cl=df_target_category, k=k)
-  confusion_matrix = table(knn_output, df_test_category)
-  acc[[k]]= accuracy(confusion_matrix)
-  sens[[k]]= confusion_matrix[2,2] / sum(confusion_matrix[,2])
-  spec[[k]]= confusion_matrix[1,1] / sum(confusion_matrix[,1])
-}
-k = as.integer(1:100)
-k_df = data.frame(
-  k,
-  acc,
-  sens,
-  spec
-)
-```
-
-# Next Steps:
-
--Incorporate RF model into ModelPerformance, and Model selection?
-
-- ?Calculate F1 score for both Logistic Regression and KNN + Visualize
-
-- Make a RF model w/ accomopanying metrics

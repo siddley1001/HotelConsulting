@@ -1,0 +1,118 @@
+---
+title: "RandomForestParameterCalculation"
+author: "David Snider"
+date: "7/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Random Forest
+```{r}
+library(tidyverse)
+library(countrycode)
+library(rvest)
+library(dplyr)
+library(tidyr)
+library(xtable)
+library(modelr)
+library(broom)
+library(class)
+library(lubridate)
+library(pracma)
+library(class)
+library(randomForest)
+
+#install.packages("ROCR")
+library(ROCR)
+
+
+df = read_csv("hotel_booking.csv")
+```
+
+```{r}
+standardize = function(vector) {
+  z = (vector-mean(vector))/sd(vector)
+  return(z)
+}
+
+#divides correct prediction by total predictions
+accuracy = function(x) {
+  sum(diag(x)/(sum(rowSums(x))))
+}
+```
+
+```{r}
+set.seed(216)
+ran = sample(1:nrow(df), 0.8 * nrow(df))
+
+df_hotel_binary = df %>% mutate(hotel = ifelse(hotel == "Resort Hotel", 1, 0))
+df_norm = as.data.frame(lapply(df_hotel_binary[, c("previous_cancellations", "previous_bookings_not_canceled", "lead_time", "adr", "hotel")], standardize)) 
+
+#subset = df[sample(x=nrow(df), size=10000), ]
+
+df_train = df_norm[ran, ] %>% cbind(., df[ran, "is_canceled"] )
+df_test = df_norm[-ran, ] %>% cbind(., df[-ran, "is_canceled"] )
+
+#df_target_category = df[ran, "is_canceled"] %>% pull(is_canceled)
+#df_test_category = df[-ran, "is_canceled"] %>% pull(is_canceled)
+df_train$is_canceled = df_train$is_canceled %>% as.factor()
+
+```
+
+```{r}
+sensitivity = function(matrix) {
+    matrix[2,2] / sum(matrix[,2])
+}
+
+specificity = function(matrix) {
+    matrix[1,1] / sum(matrix[,1])
+}
+
+acc = vector("double", 10)
+sens = vector("double", 10)
+spec = vector("double", 10)
+
+for (n in seq(10, 100, 10)) {
+    rf = randomForest(is_canceled~.,
+                       data = df_train,
+                       ntree=n)
+    
+    predicted = as.integer(predict(rf, newdata=df_test))-1
+    conf_mat = table(predicted, df_test$is_canceled)
+    acc[[n/10]] = accuracy(conf_mat)
+    sens[[n/10]] = sensitivity(conf_mat)
+    spec[[n/10]] = specificity(conf_mat)
+}
+
+rf_stats = data.frame(n = seq(10, 100, 10), acc, sens, spec) %>%
+    gather(acc:spec, key=metric, value="value")
+ggplot(rf_stats) + 
+    geom_line(aes(x=n, y=value, color=metric))
+```
+
+```{r}
+#ROC
+# 1. Area under curve
+auc= performance(perf, "auc")
+auc
+# 2. True Positive and Negative Rate
+pred = performance(perf, "tpr","fpr")
+# 3. Plot the ROC curve
+plot(pred,main="ROC Curve for Random Forest model 1",col=2,lwd=2)
+abline(a=0,b=1,lwd=2,lty=2,col="gray")
+pred1=predict(rf1,type = "prob")
+
+perf1 = prediction(pred1[,2], df_train$is_canceled)
+
+# 1. Area under curve
+auc1= performance(perf1, "auc")
+auc1
+# 2. True Positive and Negative Rate
+pred1 = performance(perf1, "tpr","fpr")
+# 3. Plot the ROC curve
+plot(pred1,main="ROC Curve for Random Forest model 2",col=2,lwd=2)
+abline(a=0,b=1,lwd=2,lty=2,col="gray")
+```
