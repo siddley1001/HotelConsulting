@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning=F, echo = FALSE)
 ```
 
 
@@ -23,7 +23,7 @@ library(class)
 library(lubridate)
 library(pracma)
 library(class)
-
+library(randomForest)
 
 df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
@@ -131,7 +131,7 @@ NumDays.resort <- model_data_resort$arrival_date
 
 The dataset contains 119,319 bookings for two hotels located in Portugal over about 2 years. There are 32 variables included in the data set; our research questions concerned a select few. Our first question uses "arrival_date" to predict the variable "avg_adr". Our group combined the given variables arrival_date_year, arrival_date_month, and arrival_date_day_of_month into the variable arrival_date, which records the client's date of arrival in days since the earliest arrival date in the dataset: July 1, 2015. To do so, we converted each arrival date into a Date type, and used a function to obtain days elapsed. We created the variable "avg_adr" using the variable "adr". ADR is defined as the client's total transaction costs divided by their staying days. In creating "avg_adr", we calculated the mean ADR value for one day for each hotel. Doing so facilitated easy observation of the oscillating relationship between avg_adr and arrival_date, which provided the motivation for our first question. 
 
-Data table for Q1: 
+Example Data for Q1: 
 
 ```{r, echo=F, results="asis"}
 #Table for Q1
@@ -154,7 +154,7 @@ print(q1table,
 
 Our second question predicts the variable "is_canceled", which has a value of 1 if the booking was canceled, and 0 otherwise. Analysis revealed that certain variables had a statistically significant relationship with is_canceled. The following are the variables we analyzed. "Hotel" describes whether the observation was at the city hotel or the resort hotel. "is_repeated_guest" is a binary variable, valued at 1 if the guest has booked previously. "lead_time" describes the number of days between entrance into the booking system and the customer's arrival. "previous_bookings_not_canceled" describes the number of the client's previous bookings that were not canceled, while "previous_cancellations" describes those that were canceled.
 
-Data Table for Q2:
+Example Data for Q2:
 
 ```{r, results="asis", echo=F}
 q2table = (df %>% select(
@@ -192,7 +192,8 @@ print(q2table,
 
 ## Question 1: Can we predict future room rates with confidence?
 
-```{r, echo=F, fig.align="center", fig.width=6, fig.height=6, fig.cap="Figure 1:" }
+```{r, echo=F, figures-side2, fig.show="hold", out.width="50%"}
+#city
 xc <- cos(2*pi*model_data_city$arrival_date/365.25)
 xs <- sin(2*pi*model_data_city$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_city)
@@ -216,10 +217,12 @@ p1.trend +
                 y = pred)) + 
   geom_vline(xintercept = 792) + 
   xlab("Arrival Date") + 
-  ylab("Average ADR")
-```
+  ylab("Average ADR") + 
+  ggtitle("City Hotel") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  ylim(0,250)
 
-```{r, echo=F}
+#resort
 xc <- cos(2*pi*model_data_resort$arrival_date/365.25)
 xs <- sin(2*pi*model_data_resort$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_resort)
@@ -230,10 +233,18 @@ p2.trend = p2  +
 new = data.frame(arrival_date=793:1577)
 model_data_resort = bind_rows(model_data_resort, new)
 model_data_resort$pred <- model.func(model_data_resort$arrival_date)
-p2.trend + geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + geom_vline(xintercept = 792)
+p2.trend + 
+  geom_line(data = model_data_resort, 
+            aes(x = arrival_date, y = pred)) +
+  geom_vline(xintercept = 792) + 
+  xlab("Arrival Date") + 
+  ylab("Average ADR") + 
+  ggtitle("Resort Hotel") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  ylim(0,250)
 ```
 
-```{r, echo=F, message=F}
+```{r, echo=F, message=F, figures-side3, fig.show="hold", out.width="50%"}
 #Walker's
 h <- read.csv("hotel_booking.csv")
 h2 = h %>% 
@@ -351,7 +362,8 @@ ggplot()+
   xlab("Time Elapsed Since 1 July 2015 (days)")+
   ylab("Average Adr")+
   theme_classic()+
-  ggtitle("Forecasted Average ADR")+
+  ggtitle("Forecasted Average ADR")+ 
+  theme(plot.title = element_text(hjust = 0.5))+
   geom_vline(xintercept = 793,linetype=1,alpha=.05)+
   geom_line(
     mapping=aes(
@@ -385,7 +397,8 @@ ggplot()+
   geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
   geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
   geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5)
-ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
+ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2) + 
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMS Error of 13.31. Our second chart, "Accuracy of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
 
@@ -654,7 +667,6 @@ df_test = bind_cols(df_test, df_knn) %>%
 ```
 
 ```{r, eval=T, echo=F}
-library(randomForest)
 #RandomForest
 
 rf = randomForest(is_canceled~.,
@@ -668,9 +680,9 @@ df_test = df_test %>%
 
 **Choosing k for k-NN**
 
-To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis.
+To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis. As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
 
-```{r, echo=F}
+```{r, echo=F, figures-side4, fig.show="hold", out.width="50%"}
 k_df_plot = k_df %>% 
   rename(
     "Accuracy"="acc",
@@ -682,21 +694,27 @@ k_df_plot = k_df %>%
     key="Metric", 
     value="Value"
     )
+
 ggplot(k_df_plot) + 
   geom_line(aes(x=k, y=Value, color=Metric)) + 
   ggtitle("Performance of k-NN model by k value") + 
-  geom_vline(xintercept=11, color="black", size=0.5)
-```
+  geom_vline(xintercept=11, color="black", size=0.5) + 
+  theme(plot.title = element_text(hjust = 0.5))
 
-As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
+rf_show = rf_stats %>% 
+  spread(metric, value) %>%
+  rename("Accuracy"=acc,
+         "Sensitivity"=sens,
+         "Specificity"=spec) %>%
+  gather("Accuracy":"Specificity", key=Metric, value=value)
 
-```{r, echo=F}
-ggplot(rf_stats %>% rename(Metric=metric)) + 
+ggplot(rf_show) + 
   geom_line(aes(x=n, y=value, color=Metric)) + 
   geom_vline(xintercept=30, color="black", size=0.5) + 
   ggtitle("Performance of RandomForest Model by ntree Value") + 
   xlab("ntree") + 
-  ylab("Value")
+  ylab("Value") + 
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
@@ -708,7 +726,7 @@ The logistic models performed the same in terms of accuracy, sensitivity, and sp
 
 **Model 2:** k-NN, with k=11
 
-**Model 3:** RandomForest, with ntree=**fill in this blank**
+**Model 3:** RandomForest, with ntree=30
 
 Below are metrics of our models' performance. 
 
