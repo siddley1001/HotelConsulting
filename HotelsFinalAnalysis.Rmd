@@ -264,7 +264,23 @@ $$46.47 \cos({2 \pi x \over 365.25}) + 26.28 \sin({2 \pi x \over 365.25}) + 0.04
 
 ```{r echo=F, figures-side2, fig.show="hold", out.width="50%", message=FALSE}
 #Walker's
-h <- read.csv("hotel_booking.csv")
+---
+title: "Error Analysis"
+author: "Walker Burgin"
+date: "7/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(pracma)
+library(xtable)
+```
+
+```{r}
+h <- read.csv("/Users/walkerburgin/Downloads/hotel_bookings.csv")
 h2 = h %>% 
   select(hotel, 
          arrival_date_month, 
@@ -323,6 +339,7 @@ rst_h_join = inner_join(rst_h_adr, rst_h_top, by = "ogn")
 ct_h_freq = ct_h_freq %>% 
   filter(n > 80, frequency < 0.6)
 
+#City Filtering
 h2 = h %>% 
   filter(hotel == "City Hotel", is_canceled == 0) %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month,stays_in_week_nights, stays_in_weekend_nights, adr) %>% mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% arrange(arrival_date_year, arrival_date_month, arrival_date_day_of_month)
 
@@ -333,6 +350,18 @@ h2 = h2 %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_da
 h2$arrival_date <- as.Date(h2$arrival_date)
 h2 = h2 %>% arrange(arrival_date)  %>% group_by(arrival_date) %>% summarise(avg_length_of_stay = mean(length_of_stay), avg_adr = mean(adr))
 
+#Resort Filtering
+s2 = h %>% 
+  filter(hotel == "Resort Hotel", is_canceled == 0) %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month,stays_in_week_nights, stays_in_weekend_nights, adr) %>% mutate(length_of_stay = stays_in_week_nights + stays_in_weekend_nights) %>% arrange(arrival_date_year, arrival_date_month, arrival_date_day_of_month)
+
+s2$arrival_date_month = as.integer(factor(s2$arrival_date_month, levels = month.name))
+
+s2 = s2 %>% dplyr::select(arrival_date_year, arrival_date_month, arrival_date_day_of_month, length_of_stay, adr) %>% unite("arrival_date", c("arrival_date_year", "arrival_date_month", "arrival_date_day_of_month"), sep = "/") %>% filter(adr != 0.00)
+
+s2$arrival_date <- as.Date(s2$arrival_date)
+s2 = s2 %>% arrange(arrival_date)  %>% group_by(arrival_date) %>% summarise(avg_length_of_stay = mean(length_of_stay), avg_adr = mean(adr))
+
+#CityData Graph
 mod = h2
 start_date = as.Date("2015-07-01")
 mod$arrival_date <- as.numeric(difftime(mod$arrival_date, start_date, unit = "days"))
@@ -357,11 +386,12 @@ mod$residual <- mod$avg_adr-mod$pred
 resid <- remove_missing(mod,na.rm=TRUE,vars = names(mod))
 resid$r2 <- resid$residual^2
 RMSError <- sqrt(mean(resid$r2))
+RMSUpperBound <-mod$pred
+RMSLowerBound<-mod$pred
 f_density<- function(x){
   (1+(x/1577))^2
 }
 
-#Graph
 ggplot()+
   geom_errorbar(
     mapping=aes(
@@ -381,8 +411,7 @@ ggplot()+
   xlab("Time Elapsed Since 1 July 2015 (days)")+
   ylab("Average Adr")+
   theme_classic()+
-  ggtitle("Forecasted Average ADR")+
-  theme(plot.title = element_text(hjust = 0.5))+
+  ggtitle("Forecasted Average ADR: City Hotels")+
   geom_vline(xintercept = 793,linetype=1,alpha=.05)+
   geom_line(
     mapping=aes(
@@ -416,18 +445,96 @@ ggplot()+
   geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
   geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
   geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5)
+ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
 
-#Graph
-ggplot()+theme_classic()+
-  ggtitle("Residuals of Predicted Curve")+
-  theme(plot.title = element_text(hjust = 0.5))+
-  ylab("Residuals (Average ADR)")+
-  xlab("Arrival Date (Elapsed Time)")+
-  geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+
-  geom_hline(yintercept = RMSError,linetype=2)
+#Resort Data Graph
+modb = s2
+start_date = as.Date("2015-07-01")
+modb$arrival_date <- as.numeric(difftime(modb$arrival_date, start_date, unit = "days"))
+NumDays.city <- modb$arrival_date
+xc <- cos(2*pi*NumDays.city/365.25)
+xs <- sin(2*pi*NumDays.city/365.25)  
+fit.lm <- lm(avg_adr ~ xc + xs + modb$arrival_date, data = modb)
+model.func = function(day) {
+  return(
+    fit.lm$coefficients[[1]] + 
+    fit.lm$coefficients[[2]]*cos(2*pi*day/365.25) + 
+    fit.lm$coefficients[[3]]*sin(2*pi*day/365.25) + 
+    fit.lm$coefficients[[4]]*day
+  )
+}
+new = data.frame(arrival_date=793:1577)
+modb = bind_rows(modb,new)
+modb$pred <- model.func(modb$arrival_date)
+modb$residual <- modb$avg_adr-modb$pred
+
+
+resid <- remove_missing(modb,na.rm=TRUE,vars = names(modb))
+resid$r2 <- resid$residual^2
+RMSError <- sqrt(mean(resid$r2))
+RMSUpperBound <-modb$pred
+RMSLowerBound<-modb$pred
+f_density<- function(x){
+  (1+(x/1577))^2
+}
+
+ggplot()+
+  geom_errorbar(
+    mapping=aes(
+      x=modb$arrival_date,
+      y=modb$pred,
+      ymax=modb$pred+(f_density(modb$arrival_date)*RMSError),
+      ymin=modb$pred-(f_density(modb$arrival_date)*RMSError)),
+    alpha=.025,
+    color="red")+
+  geom_point(
+    mapping=aes(
+      x=modb$arrival_date,
+      y=modb$avg_adr),
+    size=1,
+    color="red",
+    alpha=.25)+
+  xlab("Time Elapsed Since 1 July 2015 (days)")+
+  ylab("Average Adr")+
+  theme_classic()+
+  ggtitle("Forecasted Average ADR: Resort Hotels")+
+  geom_vline(xintercept = 793,linetype=1,alpha=.05)+
+  geom_line(
+    mapping=aes(
+      x=modb$arrival_date,
+      y=modb$pred),
+    color="purple",
+    size=.5)+
+  geom_smooth(
+    mapping=aes(
+      x=modb$arrival_date,
+      y=modb$pred+(2*f_density(modb$arrival_date)*RMSError)),
+      xseq=793:1577,
+      se=FALSE,
+      color="red",
+      alpha=.25,
+      linetype=1,
+      size=.5
+    )+
+  geom_smooth(
+    mapping=aes(
+      x=modb$arrival_date,
+      y=modb$pred-(2*f_density(modb$arrival_date)*RMSError)),
+      xseq=793:1577,
+      se=FALSE,
+      color="red",
+      alpha=.25,
+      linetype=1,
+    size=.5
+    )+
+  geom_vline(xintercept=365.25/2,color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(3/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(5/2),color="red",linetype=3,size=.5)+
+  geom_vline(xintercept=365.25*(7/2),color="red",linetype=3,size=.5)
+ggplot()+theme_classic()+ggtitle("Accuracy of Predicted Curve")+ylab("Average ADR")+xlab("Arrival Date")+geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+geom_hline(yintercept = RMSError,linetype=2)
 ```
 
-Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMSE of 13.31. Our second chart, "Residuals of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
+Our prediction model is displayed in "Forecasted Average ADR", with confidence intervals defined by the RMSE of 13.31 for City Hotels and 27.79 for Resort Hotels. Our second chart, "Residuals of Predicted Curve", identifies which segments of the prediction model are less accurate than others at mapping the dataset.
 
 ## Question 2: Which model best predicts cancellation?
 
