@@ -75,23 +75,22 @@ acc = vector("double", 10)
 sens = vector("double", 10)
 spec = vector("double", 10)
 
-for (n in seq(50, 150, 10)) {
+for (n in seq(10, 100, 10)) {
     rf = randomForest(is_canceled~.,
                        data = df_train,
                        ntree=n)
     
     predicted = as.integer(predict(rf, newdata=df_test))-1
     conf_mat = table(predicted, df_test$is_canceled)
-    acc[[n/50]] = accuracy(conf_mat)
-    sens[[n/50]] = sensitivity(conf_mat)
-    spec[[n/50]] = specificity(conf_mat)
+    acc[[n/10]] = accuracy(conf_mat)
+    sens[[n/10]] = sensitivity(conf_mat)
+    spec[[n/10]] = specificity(conf_mat)
 }
 
-rf_stats = data.frame(n = seq(50, 150, 10), acc, sens, spec) %>%
+rf_stats = data.frame(n = seq(10, 100, 10), acc, sens, spec) %>%
     gather(acc:spec, key=metric, value="value")
 ggplot(rf_stats) + 
-    geom_line(aes(x=n, y=value, color=metric)) + 
-    xlim(50,150)
+    geom_line(aes(x=n, y=value, color=metric))
 ```
 
 ```{r}

@@ -27,6 +27,7 @@ library(class)
 
 df = read_csv("hotel_booking.csv")
 k_df = read_csv("k_df.csv")
+rf_stats = read_csv("rf_stats.csv")
 ```
 
 <center>
@@ -676,7 +677,7 @@ print(rf)
 
 **Choosing k for k-NN**
 
-To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis.
+To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=**11**, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis.
 
 ```{r, echo=F}
 k_df_plot = k_df %>% 
@@ -695,6 +696,18 @@ ggplot(k_df_plot) +
   ggtitle("Performance of k-NN model by k value") + 
   geom_vline(xintercept=11, color="black", size=0.5)
 ```
+
+As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree = **30** because it maximized accuracy$\times$specificity.
+
+```{r, echo=F}
+ggplot(rf_stats %>% rename(Metric=metric)) + 
+  geom_line(aes(x=n, y=value, color=Metric)) + 
+  geom_vline(xintercept=30, color="black", size=0.5) + 
+  ggtitle("Performance of RandomForest Model by ntree Value") + 
+  xlab("ntree") + 
+  ylab("Value")
+```
+
 
 ### Model Performance
 
