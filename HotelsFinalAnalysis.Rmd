@@ -196,7 +196,7 @@ print(q2table,
 
 ## Question 1: Can we predict future room rates with confidence?
 
-```{r, echo=F, fig.align="center", fig.width=6, fig.height=6 }
+```{r, echo=F, figures-side, fig.show="hold", out.width="50%"}
 xc <- cos(2*pi*model_data_city$arrival_date/365.25)
 xs <- sin(2*pi*model_data_city$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_city)
@@ -219,10 +219,10 @@ model_data_city$pred <- model.func(model_data_city$arrival_date)
 p1.trend + 
   geom_line(data = model_data_city, 
             aes(x = arrival_date, 
-                y = pred)) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("City Hotel Predictions")
-```
+                y = pred)) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("City Hotel Predictions") + 
+  theme(plot.title = element_text(hjust = 0.5))
 
-```{r, echo=F, fig.align="center", fig.width=6, fig.height=6}
+#Resort
 xc <- cos(2*pi*model_data_resort$arrival_date/365.25)
 xs <- sin(2*pi*model_data_resort$arrival_date/365.25)
 fit.lm <- lm(avg_adr ~ xc + xs + arrival_date, data = model_data_resort)
@@ -237,15 +237,17 @@ model_data_resort$pred <- model.func(model_data_resort$arrival_date)
 #Graph
 p2.trend + 
   geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + 
-  geom_vline(xintercept = 792) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("Resort Hotel Predictions")
+  geom_vline(xintercept = 792) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("Resort Hotel Predictions") + 
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 The mathematical equation for city hotel data:
-$81.0966 + 14.66199 \cos(2*pi*x/365.25) + 5.60252 \sin(2*pi*x/365.25) + 0.05533655x$
+$81.0966 + 14.66199 \cos(2*pi*x/365.25) + 5.60252 \sin(2*pi*x/365.25) + 0.05533655x$.
+
 The mathematical equation for resort hotel data:
 $70.12623 + 46.47132 \cos(2*pi*x/365.25) + 26.28031 \sin(2*pi*x/365.25) + 0.04860842x$
 
-```{r, echo=F, message=F, fig.align="center", fig.width=6, fig.height=6}
+```{r echo=F, figures-side2, fig.show="hold", out.width="50%", message=FALSE}
 #Walker's
 h <- read.csv("hotel_booking.csv")
 h2 = h %>% 
@@ -362,6 +364,7 @@ ggplot()+
     color="red",
     alpha=.25)+
   xlab("Time Elapsed Since 1 July 2015 (days)")+
+  theme(plot.title = element_text(hjust = 0.5))+
   ylab("Average Adr")+
   theme_classic()+
   ggtitle("Forecasted Average ADR")+
@@ -402,6 +405,7 @@ ggplot()+
 #Graph
 ggplot()+theme_classic()+
   ggtitle("Accuracy of Predicted Curve")+
+  theme(plot.title = element_text(hjust = 0.5))+
   ylab("Average ADR")+
   xlab("Arrival Date (Elapsed Time)")+
   geom_area(mapping=aes(x=resid$arrival_date,y=resid$residual),fill="red")+
@@ -416,7 +420,7 @@ Our prediction model is displayed in "Forecasted Average ADR", with confidence i
 
 To determine which variables we should use in our models, we started by identifying the variables that had a significant relationship with cancellation. Here are graphs showing the significant variables' relationship with cancellation: 
 
-```{r, echo=F, figures-side, fig.show="hold", out.width="50%"}
+```{r, echo=F, figures-side3, fig.show="hold", out.width="50%"}
 leadgraph = df %>% 
   group_by(as.logical(is_canceled)) %>%
   summarize(avg_lead_time = mean(lead_time)) %>% 
@@ -721,7 +725,9 @@ df_test = df_test %>%
 
 To determine which k value we should use for our k-NN model, we analyzed changes in accuracy, sensitivity, and specificity over time. In the context of our situation, it is more important that hotels correctly classify those who did not cancel, because we want to minimize the hassle from overbooking rooms that weren't actually canceled. However, we still want to maintain accuracy. Thus, we care more about accuracy and specificity than sensitivity. Accordingly, we chose k=11, because it maximizes accuracy$\times$specificity. Below is a visualization of this analysis.
 
-```{r, echo=F, fig.width=6, fig.height=6}
+As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
+
+```{r, echo=F, figures-side4, fig.show="hold", out.width="50%"}
 k_df_plot = k_df %>% 
   rename(
     "Accuracy"="acc",
@@ -733,17 +739,12 @@ k_df_plot = k_df %>%
     key="Metric", 
     value="Value"
     )
+
 ggplot(k_df_plot) + 
   geom_line(aes(x=k, y=Value, color=Metric)) + 
   ggtitle("Performance of k-NN model by k value") + 
   geom_vline(xintercept=11, color="black", size=0.5)
-```
 
-#### Random Forest
-
-As for the RandomForest model, there was little variation of metrics by ntree value. Nevertheless, we chose parameter ntree=30 because it maximized accuracy$\times$specificity.
-
-```{r, echo=F}
 ggplot(rf_stats %>% rename(Metric=metric)) + 
   geom_line(aes(x=n, y=value, color=Metric)) + 
   geom_vline(xintercept=30, color="black", size=0.5) + 
