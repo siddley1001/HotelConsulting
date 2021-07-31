@@ -220,10 +220,7 @@ model_data_city$pred <- model.func(model_data_city$arrival_date)
 p1.trend + 
   geom_line(data = model_data_city, 
             aes(x = arrival_date, 
-                y = pred)) + 
-  geom_vline(xintercept = 792) + 
-  xlab("Arrival Date (Elapsed Time)") + 
-  ylab("Average ADR")
+                y = pred)) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("City Hotel Predictions")
 ```
 
 ```{r, echo=F, fig.align="center", fig.width=6, fig.height=6}
@@ -241,9 +238,7 @@ model_data_resort$pred <- model.func(model_data_resort$arrival_date)
 #Graph
 p2.trend + 
   geom_line(data = model_data_resort, aes(x = arrival_date, y = pred)) + 
-  geom_vline(xintercept = 792)  + 
-  xlab("Arrival Date (Elapsed Time)") + 
-  ylab("Average ADR")
+  geom_vline(xintercept = 792) + geom_vline(xintercept = 365) + geom_vline(xintercept = 730) + geom_vline(xintercept = 1095) + xlab("Days elapsed since July 1, 2015") + ylab("Average Daily Rate") + ggtitle("Resort Hotel Predictions")
 ```
 
 ```{r, echo=F, message=F, fig.align="center", fig.width=6, fig.height=6}
